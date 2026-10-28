@@ -2,6 +2,30 @@ use serde::Serialize;
 use std::{sync::atomic::{AtomicBool, Ordering}, time::Duration};
 use tauri::{AppHandle, Emitter};
 
+#[cfg(target_os = "windows")]
+fn thumbnail_data_url(
+    properties: &windows::Media::Control::GlobalSystemMediaTransportControlsSessionMediaProperties,
+) -> Option<String> {
+    use base64::Engine;
+    use windows::Storage::Streams::DataReader;
+
+    let reference = properties.Thumbnail().ok()?;
+    let stream = reference.OpenReadAsync().ok()?.get().ok()?;
+    let size = stream.Size().ok()?.min(10 * 1024 * 1024) as u32;
+    if size == 0 {
+        return None;
+    }
+    let input = stream.GetInputStreamAt(0).ok()?;
+    let reader = DataReader::CreateDataReader(&input).ok()?;
+    reader.LoadAsync(size).ok()?.get().ok()?;
+    let mut bytes = vec![0; size as usize];
+    reader.ReadBytes(&mut bytes).ok()?;
+    Some(format!(
+        "data:image/png;base64,{}",
+        base64::engine::general_purpose::STANDARD.encode(bytes)
+    ))
+}
+
 static FRONTEND_READY: AtomicBool = AtomicBool::new(false);
 
 #[tauri::command]
@@ -33,6 +57,8 @@ pub async fn get_current_track() -> Result<Track, String> {
         let mut track = Track {
             title: properties.Title().map_err(|error| error.to_string())?.to_string(),
             artist: properties.Artist().map_err(|error| error.to_string())?.to_string(),
+            album: properties.AlbumTitle().unwrap_or_default().to_string(),
+            album_art_url: thumbnail_data_url(&properties),
             playing,
             ..Default::default()
         };
@@ -104,6 +130,7 @@ pub async fn media_previous() -> Result<(), String> {
 pub struct Track {
     pub title: String,
     pub artist: String,
+    pub album: String,
     pub album_art_url: Option<String>,
     pub duration: f64,
     pub position: f64,
@@ -142,6 +169,8 @@ pub fn start(app: AppHandle) {
                 if let Ok(properties) = properties {
                     let title = properties.Title().unwrap_or_default().to_string();
                     let artist = properties.Artist().unwrap_or_default().to_string();
+                    let album = properties.AlbumTitle().unwrap_or_default().to_string();
+                    let album_art_url = thumbnail_data_url(&properties);
                     let playback = session.GetPlaybackInfo().ok();
                     let playing = playback
                         .as_ref()
@@ -155,7 +184,8 @@ pub fn start(app: AppHandle) {
                             Track {
                                 title,
                                 artist,
-                                album_art_url: None,
+                                album,
+                                album_art_url,
                                 playing,
                                 ..Default::default()
                             },

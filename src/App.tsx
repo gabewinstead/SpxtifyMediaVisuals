@@ -10,7 +10,8 @@ import { extractDominantColor } from './utils/colorExtract'
 import { fetchArtwork } from './utils/artwork'
 
 type ViewMode = 'lyrics' | 'album' | 'combined'
-type Track = { title: string; artist: string; albumArtUrl?: string; duration: number; position: number; playing: boolean }
+type Track = { title: string; artist: string; album?: string; albumArtUrl?: string; duration: number; position: number; playing: boolean }
+type TrackPayload = Partial<Track> & { album_art_url?: string }
 type Theme = {
   accentColor: string; backgroundColor: string; secondaryBackground: string
   textColor: string; mutedTextColor: string; fontFamily: string; titleSize: string
@@ -47,9 +48,18 @@ export default function App() {
     let disposed = false
 
     Promise.all([
-      listen<Track>('track-changed', (event) => setTrack(event.payload)),
+      listen<TrackPayload>('track-changed', (event) => {
+        const payload = event.payload
+        setTrack((current) => ({
+          ...current,
+          ...payload,
+          albumArtUrl: payload.albumArtUrl ?? payload.album_art_url ?? current.albumArtUrl,
+        }))
+      }),
       listen<Partial<Track>>('position-updated', (event) => setTrack((current) => ({ ...current, ...event.payload }))),
-      listen<string>('lyrics-received', (event) => setLines(parseLrc(event.payload))),
+      listen<string | LyricLine[]>('lyrics-received', (event) => {
+        setLines(Array.isArray(event.payload) ? event.payload : parseLrc(event.payload))
+      }),
     ]).then(([stopTrack, stopPosition, stopLyrics]) => {
       if (disposed) {
         stopTrack()
@@ -60,7 +70,11 @@ export default function App() {
         unlistenPosition = stopPosition
         unlistenLyrics = stopLyrics
         void invoke('frontend_ready')
-        invoke<Track>('get_current_track').then(setTrack).catch(() => undefined)
+        invoke<TrackPayload>('get_current_track').then((payload) => setTrack((current) => ({
+          ...current,
+          ...payload,
+          albumArtUrl: payload.albumArtUrl ?? payload.album_art_url ?? current.albumArtUrl,
+        }))).catch(() => undefined)
       }
     })
 
@@ -81,6 +95,7 @@ export default function App() {
             setTrack((previous) => ({
               ...previous,
               ...current,
+              albumArtUrl: current.albumArtUrl ?? previous.albumArtUrl,
               position: current.position,
               duration: current.duration,
             }))
@@ -104,13 +119,13 @@ export default function App() {
     if (!track.title || !track.artist) { setLines([]); setArtwork(undefined); return undefined }
     let active = true
     Promise.all([
-      invoke('fetch_lyrics', { artist: track.artist, track: track.title }),
-      fetchArtwork(track.title, track.artist),
+      invoke('fetch_lyrics', { artist: track.artist, track: track.title, album: track.album ?? '', duration: track.duration }),
+      Promise.resolve(track.albumArtUrl || fetchArtwork(track.title, track.artist)),
     ]).then(([, image]) => {
-      if (active) setArtwork(image)
+      if (active && typeof image === 'string') setArtwork(image)
     }).catch(() => { if (active) setLines([]) })
     return () => { active = false }
-  }, [track.title, track.artist])
+  }, [track.title, track.artist, track.album, track.duration])
   useEffect(() => {
     extractDominantColor(artwork).then((color) => setAccent(color === defaultTheme.accentColor ? theme.accentColor : color))
   }, [artwork, theme.accentColor])
@@ -131,7 +146,7 @@ export default function App() {
     '--panel-opacity': theme.panelOpacity, '--blur': theme.blurAmount, '--radius': theme.borderRadius,
     opacity: windowOpacity,
   } as React.CSSProperties}>
-    {(mode === 'lyrics' || mode === 'combined') && <AlbumArtBackground image={artwork} accent={accent} />}
+    {(mode === 'lyrics' || mode === 'combined') && <AlbumArtBackground image={track.albumArtUrl || artwork} accent={accent} />}
     <section className="overlay" data-tauri-drag-region>
       <header className="top-bar" data-tauri-drag-region>
         {hasTrack && <div className="track-header"><strong>{track.title}</strong><span>{track.artist}</span></div>}
@@ -145,7 +160,7 @@ export default function App() {
           ? <><div className="lyrics-track-info"><h1>{track.title}</h1><p>{track.artist}</p></div><LyricsDisplay lines={lines} activeIndex={activeIndex} accent={accent} karaoke={karaoke} /></>
           : <IdleState accent={accent} />
         : <div className="now-playing">
-            {artwork ? <img className="cover-art" src={artwork} alt="" /> : <div className="cover-placeholder" />}
+            {track.albumArtUrl || artwork ? <img className="cover-art" src={track.albumArtUrl || artwork} alt="" /> : <div className="cover-placeholder" />}
             <div className="track-info"><h1>{hasTrack ? track.title : 'Waiting for playback'}</h1><p>{hasTrack ? track.artist : ''}</p></div>
           </div>}
       <footer className="bottom-bar" data-tauri-drag-region="false">
