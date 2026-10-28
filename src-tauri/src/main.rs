@@ -41,6 +41,7 @@ pub fn run() {
             media_session::media_play_pause,
             media_session::media_next,
             media_session::media_previous,
+            media_session::frontend_ready,
             settings::get_theme,
             settings::save_theme,
             settings::get_view_mode,

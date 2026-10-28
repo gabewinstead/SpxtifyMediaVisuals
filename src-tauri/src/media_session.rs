@@ -1,6 +1,13 @@
 use serde::Serialize;
-use std::time::Duration;
+use std::{sync::atomic::{AtomicBool, Ordering}, time::Duration};
 use tauri::{AppHandle, Emitter};
+
+static FRONTEND_READY: AtomicBool = AtomicBool::new(false);
+
+#[tauri::command]
+pub fn frontend_ready() {
+    FRONTEND_READY.store(true, Ordering::Release);
+}
 
 #[tauri::command]
 pub async fn media_play_pause() -> Result<(), String> {
@@ -103,7 +110,7 @@ pub fn start(app: AppHandle) {
                         .and_then(|info| info.PlaybackStatus().ok())
                         == Some(GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing);
                     let key = format!("{title}::{artist}");
-                    if key != last_key || (last_key.is_empty() && !title.is_empty()) {
+                    if key != last_key && FRONTEND_READY.load(Ordering::Acquire) {
                         last_key = key;
                         let _ = app.emit(
                             "track-changed",

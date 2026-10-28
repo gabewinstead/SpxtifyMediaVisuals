@@ -59,6 +59,7 @@ export default function App() {
         unlistenTrack = stopTrack
         unlistenPosition = stopPosition
         unlistenLyrics = stopLyrics
+        void invoke('frontend_ready')
       }
     })
 
