@@ -10,6 +10,45 @@ pub fn frontend_ready() {
 }
 
 #[tauri::command]
+pub async fn get_current_track() -> Result<Track, String> {
+    #[cfg(target_os = "windows")]
+    {
+        use windows::Media::Control::{
+            GlobalSystemMediaTransportControlsSessionManager,
+            GlobalSystemMediaTransportControlsSessionPlaybackStatus,
+        };
+
+        let manager = GlobalSystemMediaTransportControlsSessionManager::RequestAsync()
+            .and_then(|operation| operation.get())
+            .map_err(|error| error.to_string())?;
+        let session = manager.GetCurrentSession().map_err(|error| error.to_string())?;
+        let properties = session
+            .TryGetMediaPropertiesAsync()
+            .and_then(|operation| operation.get())
+            .map_err(|error| error.to_string())?;
+        let playback = session.GetPlaybackInfo().map_err(|error| error.to_string())?;
+        let playing = playback.PlaybackStatus()
+            .map_err(|error| error.to_string())?
+            == GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing;
+        let mut track = Track {
+            title: properties.Title().map_err(|error| error.to_string())?.to_string(),
+            artist: properties.Artist().map_err(|error| error.to_string())?.to_string(),
+            playing,
+            ..Default::default()
+        };
+        if let Ok(timeline) = session.GetTimelineProperties() {
+            if let (Ok(position), Ok(end)) = (timeline.Position(), timeline.EndTime()) {
+                track.position = position.Duration as f64 / 10_000_000.0;
+                track.duration = end.Duration as f64 / 10_000_000.0;
+            }
+        }
+        return Ok(track);
+    }
+    #[cfg(not(target_os = "windows"))]
+    { Err("Current media track is not supported on this platform".to_string()) }
+}
+
+#[tauri::command]
 pub async fn media_play_pause() -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
@@ -88,8 +127,7 @@ pub fn start(app: AppHandle) {
             .and_then(|operation| operation.get())
         {
             Ok(manager) => manager,
-            Err(error) => {
-                eprintln!("Unable to connect to Windows media session manager: {error}");
+            Err(_) => {
                 return;
             }
         };

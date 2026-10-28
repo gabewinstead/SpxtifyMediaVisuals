@@ -60,6 +60,7 @@ export default function App() {
         unlistenPosition = stopPosition
         unlistenLyrics = stopLyrics
         void invoke('frontend_ready')
+        invoke<Track>('get_current_track').then(setTrack).catch(() => undefined)
       }
     })
 
