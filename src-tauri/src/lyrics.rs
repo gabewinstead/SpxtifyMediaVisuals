@@ -50,9 +50,16 @@ async fn search_lyrics(client: &reqwest::Client, artist: &str, track: &str) -> O
         .query(&[("artist_name", artist), ("track_name", track)])
         .send().await.ok()?.error_for_status().ok()?
         .json::<Vec<SearchResponse>>().await.ok()?;
-    results.into_iter().find_map(|result| result.synced_lyrics
-        .or(result.plain_lyrics)
-        .filter(|lyrics| !lyrics.trim().is_empty()))
+    let mut plain = None;
+    for result in results {
+        if let Some(lyrics) = result.synced_lyrics.filter(|lyrics| !lyrics.trim().is_empty()) {
+            return Some(lyrics);
+        }
+        if plain.is_none() {
+            plain = result.plain_lyrics.filter(|lyrics| !lyrics.trim().is_empty());
+        }
+    }
+    plain
 }
 
 async fn qobuzify_lyrics(client: &reqwest::Client, artist: &str, track: &str) -> Option<String> {
@@ -79,7 +86,11 @@ pub async fn fetch_lyrics(app: AppHandle, artist: String, track: String, album: 
         app.emit("lyrics-received", value.clone()).map_err(|e| e.to_string())?;
         return Ok(value);
     }
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .user_agent("SpotifyLyricsOverlay/0.1")
+        .timeout(std::time::Duration::from_secs(12))
+        .build()
+        .map_err(|error| error.to_string())?;
     let lyrics = if let Some(value) = request_lyrics(&client, &artist, &track, &album, duration).await {
         value
     } else if let Some(value) = search_lyrics(&client, &artist, &track).await {

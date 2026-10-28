@@ -12,6 +12,7 @@ import { fetchArtwork } from './utils/artwork'
 type ViewMode = 'lyrics' | 'album' | 'combined'
 type Track = { title: string; artist: string; album?: string; albumArtUrl?: string; duration: number; position: number; playing: boolean }
 type TrackPayload = Partial<Track> & { album_art_url?: string }
+type PositionPayload = { position?: number; duration?: number; playing?: boolean }
 type LyricsPayload = string | LyricLine[]
 type Theme = {
   accentColor: string; backgroundColor: string; secondaryBackground: string
@@ -36,7 +37,40 @@ function parseLyricsPayload(payload: LyricsPayload): LyricLine[] {
   })).filter((line) => line.text.length > 0)
 }
 
-/** Renders the now-playing overlay and its runtime-selectable presentation modes. */
+async function fetchLyricsDirect(artist: string, title: string): Promise<string> {
+  // Try LRCLIB
+  try {
+    const url = `https://lrclib.net/api/search?track_name=${encodeURIComponent(title)}&artist_name=${encodeURIComponent(artist)}`
+    const resp = await fetch(url)
+    if (resp.ok) {
+      const data = await resp.json()
+      if (Array.isArray(data)) {
+        for (const item of data) {
+          if (item.syncedLyrics) return item.syncedLyrics
+        }
+        for (const item of data) {
+          if (item.plainLyrics) return item.plainLyrics
+        }
+      }
+    }
+  } catch (e) {
+    console.error('LRCLIB fetch failed:', e)
+  }
+  // Fallback: Qobuzify
+  try {
+    const url2 = `https://api.qobuzify.app/v2/track?name=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist)}`
+    const resp2 = await fetch(url2)
+    if (resp2.ok) {
+      const data2 = await resp2.json()
+      if (data2.syncedLyrics) return data2.syncedLyrics
+      if (data2.lyrics) return data2.lyrics
+    }
+  } catch (e) {
+    console.error('Qobuzify fetch failed:', e)
+  }
+  return ''
+}
+
 export default function App() {
   const appWindow = getCurrentWindow()
   const [track, setTrack] = useState<Track>({ title: '', artist: '', duration: 0, position: 0, playing: false })
@@ -46,12 +80,14 @@ export default function App() {
   const [theme, setTheme] = useState<Theme>(defaultTheme)
   const [mode, setMode] = useState<ViewMode>('lyrics')
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [karaoke, setKaraoke] = useState(true)
-  const [windowOpacity, setWindowOpacity] = useState(1)
+  const karaoke = true
+  const windowOpacity = 1
   const [alwaysOnTop, setAlwaysOnTop] = useState(true)
+  const [lyricsLoading, setLyricsLoading] = useState(false)
   const activeIndex = useMemo(() => activeLyricIndex(lines, track.position), [lines, track.position])
-  const hasTrack = Boolean(track.title && track.artist)
+  const hasTrack = Boolean(track.title.trim())
 
+  // Event listeners
   useEffect(() => {
     let unlistenTrack: (() => void) | undefined
     let unlistenPosition: (() => void) | undefined
@@ -61,14 +97,27 @@ export default function App() {
     Promise.all([
       listen<TrackPayload>('track-changed', (event) => {
         const payload = event.payload
+        if (!payload.title?.trim()) return
         setTrack((current) => ({
           ...current,
           ...payload,
           albumArtUrl: payload.albumArtUrl ?? payload.album_art_url ?? current.albumArtUrl,
         }))
+        setLyricsLoading(true)
       }),
-      listen<Partial<Track>>('position-updated', (event) => setTrack((current) => ({ ...current, ...event.payload }))),
-      listen<LyricsPayload>('lyrics-received', (event) => setLines(parseLyricsPayload(event.payload))),
+      listen<PositionPayload>('position-updated', (event) => {
+        const payload = event.payload
+        setTrack((current) => ({
+          ...current,
+          position: payload.position ?? current.position,
+          duration: payload.duration ?? current.duration,
+          playing: payload.playing ?? current.playing,
+        }))
+      }),
+      listen<LyricsPayload>('lyrics-received', (event) => {
+        setLines(parseLyricsPayload(event.payload))
+        setLyricsLoading(false)
+      }),
     ]).then(([stopTrack, stopPosition, stopLyrics]) => {
       if (disposed) {
         stopTrack()
@@ -79,11 +128,15 @@ export default function App() {
         unlistenPosition = stopPosition
         unlistenLyrics = stopLyrics
         void invoke('frontend_ready')
-        invoke<TrackPayload>('get_current_track').then((payload) => setTrack((current) => ({
-          ...current,
-          ...payload,
-          albumArtUrl: payload.albumArtUrl ?? payload.album_art_url ?? current.albumArtUrl,
-        }))).catch(() => undefined)
+        invoke<TrackPayload>('get_current_track').then((payload) => {
+          if (!payload.title?.trim()) return
+          setTrack((current) => ({
+            ...current,
+            ...payload,
+            albumArtUrl: payload.albumArtUrl ?? payload.album_art_url ?? current.albumArtUrl,
+          }))
+          setLyricsLoading(true)
+        }).catch(() => undefined)
       }
     })
 
@@ -95,18 +148,19 @@ export default function App() {
     }
   }, [])
 
+  // Poll for track refresh (position, playing state)
   useEffect(() => {
     let active = true
     const refreshTrack = () => {
       invoke<Track>('get_current_track')
         .then((current) => {
-          if (active && (current.title || current.artist)) {
+          if (active && current.title?.trim()) {
             setTrack((previous) => ({
               ...previous,
-              ...current,
-              albumArtUrl: current.albumArtUrl ?? previous.albumArtUrl,
               position: current.position,
               duration: current.duration,
+              playing: current.playing,
+              albumArtUrl: current.albumArtUrl ?? previous.albumArtUrl,
             }))
           }
         })
@@ -120,32 +174,77 @@ export default function App() {
     }
   }, [])
 
+  // Load theme and view mode on mount
   useEffect(() => {
     invoke<Theme>('get_theme').then((value) => setTheme(value)).catch(() => undefined)
     invoke<string>('get_view_mode').then((value) => setMode(value === 'album' || value === 'combined' ? value : 'lyrics')).catch(() => undefined)
   }, [])
+
+  // Fetch lyrics when track changes
   useEffect(() => {
-    if (!track.title || !track.artist) { setLines([]); setArtwork(undefined); return undefined }
+    if (!track.title.trim()) return undefined
     let active = true
-    Promise.all([
-      invoke<string>('fetch_lyrics', { artist: track.artist, track: track.title, album: track.album ?? '', duration: track.duration }),
-      Promise.resolve(track.albumArtUrl || fetchArtwork(track.title, track.artist)),
-    ]).then(([lyrics, image]) => {
+    setLyricsLoading(true)
+    setLines([])
+
+    const doFetch = async () => {
+      let lyrics = ''
+      // Try Rust command first
+      try {
+        lyrics = await invoke<string>('fetch_lyrics', {
+          artist: track.artist,
+          track: track.title,
+          album: track.album ?? '',
+          duration: track.duration,
+        })
+      } catch (e) {
+        console.error('Rust fetch_lyrics failed:', e)
+      }
+      // If Rust returned nothing, fetch directly from webview
+      if (!lyrics || lyrics.trim().length === 0) {
+        lyrics = await fetchLyricsDirect(track.artist, track.title)
+      }
       if (!active) return
       setLines(parseLyricsPayload(lyrics))
-      if (typeof image === 'string') setArtwork(image)
-    }).catch(() => { if (active) setLines([]) })
+      setLyricsLoading(false)
+    }
+
+    doFetch().catch(() => {
+      if (!active) return
+      setLines([])
+      setLyricsLoading(false)
+    })
+
     return () => { active = false }
-  }, [track.title, track.artist, track.album, track.duration])
+  }, [track.title, track.artist])
+
+  // Fetch artwork separately
+  useEffect(() => {
+    if (!track.title.trim()) return
+    if (track.albumArtUrl) {
+      setArtwork(track.albumArtUrl)
+      return
+    }
+    let active = true
+    fetchArtwork(track.title, track.artist).then((url) => {
+      if (active && typeof url === 'string') setArtwork(url)
+    }).catch(() => undefined)
+    return () => { active = false }
+  }, [track.title, track.artist, track.albumArtUrl])
+
+  // Extract accent color from artwork
   useEffect(() => {
     extractDominantColor(artwork).then((color) => setAccent(color === defaultTheme.accentColor ? theme.accentColor : color))
   }, [artwork, theme.accentColor])
+
+  // Poll for theme changes
   useEffect(() => {
     const timer = window.setInterval(() => {
       invoke<Theme>('get_theme').then((value) => setTheme((current) => JSON.stringify(current) === JSON.stringify(value) ? current : value)).catch(() => undefined)
     }, 2000)
     return () => window.clearInterval(timer)
   }, [])
+
   const changeMode = (nextMode: ViewMode) => {
     setMode(nextMode)
     invoke('save_view_mode', { mode: nextMode }).catch(() => undefined)
@@ -158,6 +257,7 @@ export default function App() {
     if (await appWindow.isMaximized()) await appWindow.unmaximize()
     else await appWindow.maximize()
   }
+
   return <main className={`app-shell mode-${mode}`} style={{
     '--accent': accent, '--background': theme.backgroundColor, '--secondary': theme.secondaryBackground,
     '--text': theme.textColor, '--muted': theme.mutedTextColor, '--font': theme.fontFamily,
@@ -167,37 +267,35 @@ export default function App() {
   } as React.CSSProperties}>
     {(mode === 'lyrics' || mode === 'combined') && <AlbumArtBackground image={track.albumArtUrl || artwork} accent={accent} />}
     <header className="top-bar" data-tauri-drag-region>
-      <div className="view-mode-buttons" data-tauri-drag-region="false">
-        {(['lyrics', 'album', 'combined'] as ViewMode[]).map((item) =>
-          <button data-tauri-drag-region="false" className={mode === item ? 'selected' : ''} key={item} onMouseDown={stopDrag} onClick={() => changeMode(item)}>
-            {item[0].toUpperCase() + item.slice(1)}
-          </button>)}
-      </div>
       <div className="window-actions" data-tauri-drag-region="false">
-        <button data-tauri-drag-region="false" onMouseDown={stopDrag} onClick={() => void appWindow.minimize()} aria-label="Minimize" title="Minimize">−</button>
-        <button data-tauri-drag-region="false" onMouseDown={stopDrag} onClick={() => void toggleMaximize()} aria-label="Maximize" title="Maximize">□</button>
-        <button data-tauri-drag-region="false" onMouseDown={stopDrag} onClick={() => void appWindow.close()} aria-label="Close" title="Close">×</button>
+        <button className="pointer-events-auto" data-tauri-drag-region="false" onMouseDown={stopDrag} onClick={() => void appWindow.minimize()} aria-label="Minimize" title="Minimize">−</button>
+        <button className="pointer-events-auto" data-tauri-drag-region="false" onMouseDown={stopDrag} onClick={() => void toggleMaximize()} aria-label="Maximize" title="Maximize">□</button>
+        <button className="pointer-events-auto" data-tauri-drag-region="false" onMouseDown={stopDrag} onClick={() => void appWindow.close()} aria-label="Close" title="Close">×</button>
       </div>
     </header>
     <section className="overlay">
       <div className="view-content">
         {hasTrack && mode === 'lyrics' && <div className="track-header"><strong>{track.title}</strong><span>{track.artist}</span></div>}
-      {mode === 'lyrics' || mode === 'combined'
-        ? hasTrack
-          ? <div className={`lyrics-content ${mode === 'combined' ? 'combined-content' : ''} ${track.playing ? 'is-playing' : 'is-paused'}`}>
-              {mode === 'combined' && <div className="combined-track-card">
-                {(track.albumArtUrl || artwork) && <img src={track.albumArtUrl || artwork} alt="" />}
-                <div><h1>{track.title}</h1><p>{track.artist}</p></div>
-              </div>}
-              {mode === 'lyrics' && <div className="lyrics-track-info"><h1>{track.title}</h1><p>{track.artist}</p></div>}
-              <LyricsDisplay lines={lines} activeIndex={activeIndex} accent={accent} karaoke={karaoke} />
-              {mode === 'combined' && <div className="combined-vignette" />}
-            </div>
-          : <IdleState accent={accent} />
-        : <div className="now-playing">
-            {track.albumArtUrl || artwork ? <img className="cover-art" src={track.albumArtUrl || artwork} alt="" /> : <div className="cover-placeholder" />}
-            <div className="track-info"><h1>{hasTrack ? track.title : 'Waiting for playback'}</h1><p>{hasTrack ? track.artist : ''}</p></div>
-          </div>}
+        {mode === 'lyrics' || mode === 'combined'
+          ? hasTrack
+            ? <div className={`lyrics-content ${mode === 'combined' ? 'combined-content' : ''} ${track.playing ? 'is-playing' : 'is-paused'}`}>
+                {mode === 'combined' && <div className="combined-track-card">
+                  {(track.albumArtUrl || artwork) && <img src={track.albumArtUrl || artwork} alt="" />}
+                  <div><h1>{track.title}</h1><p>{track.artist}</p></div>
+                </div>}
+                {mode === 'lyrics' && <div className="lyrics-track-info"><h1>{track.title}</h1><p>{track.artist}</p></div>}
+                {lyricsLoading
+                  ? <p className="lyrics-status">Loading lyrics...</p>
+                  : lines.length > 0
+                    ? <LyricsDisplay lines={lines} activeIndex={activeIndex} accent={accent} karaoke={karaoke} />
+                    : <p className="lyrics-status">No lyrics available</p>}
+                {mode === 'combined' && <div className="combined-vignette" />}
+              </div>
+            : <IdleState accent={accent} />
+          : <div className="now-playing">
+              {track.albumArtUrl || artwork ? <img className="cover-art" src={track.albumArtUrl || artwork} alt="" /> : <div className="cover-placeholder" />}
+              <div className="track-info"><h1>{hasTrack ? track.title : 'Waiting for playback'}</h1><p>{hasTrack ? track.artist : ''}</p></div>
+            </div>}
       </div>
       <footer className="bottom-bar" data-tauri-drag-region="false">
         <ProgressBar position={track.position} duration={track.duration} accent={accent} />
@@ -213,8 +311,12 @@ export default function App() {
         <div className="settings-wrap">
           <button className="settings-button" onClick={() => setSettingsOpen((open) => !open)} aria-label="Settings">⚙</button>
           {settingsOpen && <div className="settings-panel">
-            <label><input type="checkbox" checked={karaoke} onChange={(event) => setKaraoke(event.target.checked)} /> Karaoke</label>
-            <label>Opacity <input type="range" min="0.5" max="1" step="0.05" value={windowOpacity} onChange={(event) => setWindowOpacity(Number(event.target.value))} /></label>
+            <span>View mode</span>
+            {(['lyrics', 'album', 'combined'] as ViewMode[]).map((item) =>
+              <label className="view-mode-option" key={item}>
+                <input type="radio" name="view-mode" checked={mode === item} onChange={() => changeMode(item)} />
+                {item[0].toUpperCase() + item.slice(1)}
+              </label>)}
             <label><input type="checkbox" checked={alwaysOnTop} onChange={(event) => { setAlwaysOnTop(event.target.checked); void appWindow.setAlwaysOnTop(event.target.checked) }} /> Always on top</label>
             <button onClick={() => setSettingsOpen(false)}>Close</button>
           </div>}
@@ -234,4 +336,4 @@ function IdleState({ accent }: { accent: string }) {
     <span className="idle-pulse" style={{ backgroundColor: accent, boxShadow: `0 0 24px ${accent}` }} />
     <span>Waiting for playback...</span>
   </div>
-}
+}   

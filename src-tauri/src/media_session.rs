@@ -28,6 +28,19 @@ fn thumbnail_data_url(
 
 static FRONTEND_READY: AtomicBool = AtomicBool::new(false);
 
+#[cfg(target_os = "windows")]
+fn spotify_session(
+    manager: &windows::Media::Control::GlobalSystemMediaTransportControlsSessionManager,
+) -> Option<windows::Media::Control::GlobalSystemMediaTransportControlsSession> {
+    let sessions = manager.GetSessions().ok()?;
+    let count = sessions.Size().ok()?;
+    (0..count).find_map(|index| {
+        let session = sessions.GetAt(index).ok()?;
+        let source = session.SourceAppUserModelId().ok()?.to_string();
+        source.to_lowercase().contains("spotify").then_some(session)
+    })
+}
+
 #[tauri::command]
 pub fn frontend_ready() {
     FRONTEND_READY.store(true, Ordering::Release);
@@ -45,7 +58,8 @@ pub async fn get_current_track() -> Result<Track, String> {
         let manager = GlobalSystemMediaTransportControlsSessionManager::RequestAsync()
             .and_then(|operation| operation.get())
             .map_err(|error| error.to_string())?;
-        let session = manager.GetCurrentSession().map_err(|error| error.to_string())?;
+        let session = spotify_session(&manager)
+            .ok_or_else(|| "No Spotify media session is available".to_string())?;
         let properties = session
             .TryGetMediaPropertiesAsync()
             .and_then(|operation| operation.get())
@@ -159,16 +173,18 @@ pub fn start(app: AppHandle) {
             }
         };
         let mut last_key = String::new();
-        let mut missed_sessions = 0u8;
         loop {
-            if let Ok(session) = manager.GetCurrentSession() {
-                missed_sessions = 0;
+            if let Some(session) = spotify_session(&manager) {
                 let properties = session
                     .TryGetMediaPropertiesAsync()
                     .and_then(|operation| operation.get());
                 if let Ok(properties) = properties {
                     let title = properties.Title().unwrap_or_default().to_string();
                     let artist = properties.Artist().unwrap_or_default().to_string();
+                    if title.trim().is_empty() {
+                        std::thread::sleep(Duration::from_millis(500));
+                        continue;
+                    }
                     let album = properties.AlbumTitle().unwrap_or_default().to_string();
                     let album_art_url = thumbnail_data_url(&properties);
                     let playback = session.GetPlaybackInfo().ok();
@@ -196,22 +212,14 @@ pub fn start(app: AppHandle) {
                         if let (Ok(position), Ok(end)) = (timeline.Position(), timeline.EndTime()) {
                             let _ = app.emit(
                                 "position-updated",
-                                Track {
-                                    position: position.Duration as f64 / 10_000_000.0,
-                                    duration: end.Duration as f64 / 10_000_000.0,
-                                    playing,
-                                    ..Default::default()
-                                },
+                                serde_json::json!({
+                                    "position": position.Duration as f64 / 10_000_000.0,
+                                    "duration": end.Duration as f64 / 10_000_000.0,
+                                    "playing": playing
+                                }),
                             );
                         }
                     }
-                }
-            } else if !last_key.is_empty() {
-                missed_sessions = missed_sessions.saturating_add(1);
-                if missed_sessions >= 3 {
-                    last_key.clear();
-                    missed_sessions = 0;
-                    let _ = app.emit("track-changed", Track::default());
                 }
             }
             std::thread::sleep(Duration::from_millis(500));
@@ -238,7 +246,7 @@ pub fn start(app: AppHandle) {
                         .trim()
                         .split('\t')
                         .collect();
-                    if values.len() >= 6 {
+                    if values.len() >= 6 && !values[0].trim().is_empty() {
                         let key = format!("{}::{}", values[0], values[1]);
                         let playing = values[5].eq_ignore_ascii_case("playing");
                         if key != last_key {
@@ -256,21 +264,14 @@ pub fn start(app: AppHandle) {
                         }
                         let _ = app.emit(
                             "position-updated",
-                            Track {
-                                position: parse_playerctl_time(values[3]),
-                                duration: parse_playerctl_time(values[4]),
-                                playing,
-                                ..Default::default()
-                            },
+                            serde_json::json!({
+                                "position": parse_playerctl_time(values[3]),
+                                "duration": parse_playerctl_time(values[4]),
+                                "playing": playing
+                            }),
                         );
                     }
-                } else if !last_key.is_empty() {
-                    last_key.clear();
-                    let _ = app.emit("track-changed", Track::default());
                 }
-            } else if !last_key.is_empty() {
-                last_key.clear();
-                let _ = app.emit("track-changed", Track::default());
             }
             std::thread::sleep(Duration::from_millis(500));
         }
