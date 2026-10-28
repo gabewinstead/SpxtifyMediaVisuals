@@ -8,12 +8,12 @@ button { font: inherit; }
 .art-background::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, #12121288, var(--background) 92%); }
 .overlay { position: relative; z-index: 1; height: 100vh; display: flex; flex-direction: column; padding: 62px 5vw 25px; background: linear-gradient(180deg, #00000014, #0000003d); }
 .mode-lyrics .overlay { background: linear-gradient(180deg, #12121266 0%, #090909aa 100%); }
-.top-bar { position: absolute; z-index: 50; top: 0; left: 0; right: 0; height: 48px; display: flex; align-items: center; justify-content: flex-end; padding: 0 16px; background: #0000004d; backdrop-filter: blur(10px); }
+.top-bar { position: absolute; z-index: 100; top: 0; left: 0; right: 0; height: 48px; display: flex; align-items: center; justify-content: flex-end; padding: 8px 12px; pointer-events: none; background: #0000004d; backdrop-filter: blur(10px); }
 .track-header { display: flex; flex-direction: column; gap: 2px; max-width: 55%; overflow: hidden; }
 .track-header strong { overflow: hidden; color: var(--text); font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
 .track-header span { overflow: hidden; color: var(--muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.window-actions { display: flex; gap: 5px; }
-.window-actions button { width: 28px; height: 28px; border: 0; border-radius: 6px; color: var(--muted); background: #ffffff0b; cursor: pointer; }
+.window-actions { display: flex; gap: 4px; pointer-events: auto; }
+.window-actions button { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; color: var(--muted); background: transparent; cursor: pointer; font-size: 16px; }
 .window-actions button:hover { color: var(--text); background: #ffffff1b; }
 .now-playing { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; }
 .view-content { display: flex; flex: 1; min-height: 0; flex-direction: column; }
@@ -54,16 +54,33 @@ button { font: inherit; }
 .playback-controls button { border: 0; color: var(--muted); background: transparent; cursor: pointer; font-size: 13px; }
 .playback-controls button:hover { color: var(--text); }
 .playback-controls .play-button { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; color: #080808; background: var(--text); font-size: 15px; }
-.settings-wrap { position: absolute; right: 0; bottom: 0; }
+.settings-wrap { position: relative; }
 .settings-button { border: 0; color: var(--muted); background: transparent; cursor: pointer; font-size: 16px; }
 .settings-button:hover { color: var(--text); }
-.settings-panel { position: absolute; right: 0; bottom: 30px; display: flex; flex-direction: column; width: 280px; padding: 14px; border-left: 1px solid #ffffff1a; background: #121212d9; backdrop-filter: blur(20px); box-shadow: 0 15px 35px #00000099; }
+.settings-panel { position: absolute; right: 0; bottom: 48px; display: flex; flex-direction: column; gap: 8px; width: 220px; padding: 16px; border: 1px solid #ffffff1a; border-radius: var(--radius); background: var(--secondary); backdrop-filter: blur(20px); box-shadow: 0 8px 32px #00000066; z-index: 200; pointer-events: auto; }
 .settings-panel span { padding: 5px 8px 8px; color: var(--muted); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
 .settings-panel button { border: 0; border-radius: 6px; padding: 8px; color: var(--text); background: transparent; text-align: left; cursor: pointer; }
 .settings-panel button:hover, .settings-panel button.selected { background: var(--accent); color: #080808; }
 .settings-panel label { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px; color: var(--muted); font-size: 13px; }
 .settings-panel .view-mode-option { justify-content: flex-start; }
 .settings-panel input[type="radio"] { accent-color: var(--accent); }
+.settings-panel label { pointer-events: auto; cursor: pointer; }
+.settings-panel input[type="radio"], .settings-panel input[type="checkbox"] { pointer-events: auto; cursor: pointer; }
+.settings-field { flex-direction: column; align-items: stretch !important; }
+.settings-field select { color: var(--text); background: var(--secondary); border: 1px solid #ffffff33; border-radius: 6px; padding: 6px; }
+.custom-theme-editor { display: flex; flex-direction: column; gap: 6px; padding-top: 4px; }
+.custom-theme-editor label { flex-direction: row; font-size: 12px; }
+.custom-theme-editor input[type="color"] { width: 32px; height: 22px; padding: 0; border: 0; }
+.custom-theme-editor input[type="range"] { width: 100%; }
+.layout-left-aligned .view-content { align-items: flex-start; padding-left: 8%; }
+.layout-left-aligned .lyrics-list { text-align: left; }
+.layout-left-aligned .lyric-line { text-align: left; }
+.layout-split .view-content { flex-direction: row; align-items: center; gap: 40px; padding: 40px; }
+.layout-split .now-playing { flex: 0 0 40%; }
+.layout-split .lyrics-content { flex: 1; }
+.layout-minimal .art-background { display: none; }
+.layout-minimal .lyric-line { font-size: 16px; }
+.layout-cinematic .lyrics-content { padding-top: 40px; padding-bottom: 40px; }
 .settings-panel input[type="range"] { width: 120px; accent-color: var(--accent); }
 @media (max-width: 700px) { .cover-art, .cover-placeholder { width: min(65vw, 300px); height: min(65vw, 300px); } }
 @keyframes idle-pulse { 50% { transform: scale(1.7); opacity: .45; } }

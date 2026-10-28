@@ -15,6 +15,7 @@ type TrackPayload = Partial<Track> & { album_art_url?: string }
 type PositionPayload = { position?: number; duration?: number; playing?: boolean }
 type LyricsPayload = string | LyricLine[]
 type Theme = {
+  id: string; name: string; layout: string
   accentColor: string; backgroundColor: string; secondaryBackground: string
   textColor: string; mutedTextColor: string; fontFamily: string; titleSize: string
   artistSize: string; lyricSize: string; panelOpacity: number; blurAmount: string; borderRadius: string
@@ -25,6 +26,7 @@ const defaultTheme: Theme = {
   textColor: '#FFFFFF', mutedTextColor: '#B3B3B3', fontFamily: 'Inter, Arial, sans-serif',
   titleSize: '32px', artistSize: '18px', lyricSize: '42px', panelOpacity: 0.72,
   blurAmount: '42px', borderRadius: '12px',
+  id: 'spotify-dark', name: 'Spotify Dark', layout: 'center',
 }
 
 function parseLyricsPayload(payload: LyricsPayload): LyricLine[] {
@@ -78,6 +80,7 @@ export default function App() {
   const [artwork, setArtwork] = useState<string>()
   const [accent, setAccent] = useState(defaultTheme.accentColor)
   const [theme, setTheme] = useState<Theme>(defaultTheme)
+  const [layoutStyle, setLayoutStyle] = useState('center')
   const [mode, setMode] = useState<ViewMode>('lyrics')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const karaoke = true
@@ -176,7 +179,7 @@ export default function App() {
 
   // Load theme and view mode on mount
   useEffect(() => {
-    invoke<Theme>('get_theme').then((value) => setTheme(value)).catch(() => undefined)
+    invoke<Theme>('get_theme').then((value) => { setTheme(value); setLayoutStyle(value.layout || 'center') }).catch(() => undefined)
     invoke<string>('get_view_mode').then((value) => setMode(value === 'album' || value === 'combined' ? value : 'lyrics')).catch(() => undefined)
   }, [])
 
@@ -240,7 +243,10 @@ export default function App() {
   // Poll for theme changes
   useEffect(() => {
     const timer = window.setInterval(() => {
-      invoke<Theme>('get_theme').then((value) => setTheme((current) => JSON.stringify(current) === JSON.stringify(value) ? current : value)).catch(() => undefined)
+      invoke<Theme>('get_theme').then((value) => {
+        setTheme((current) => JSON.stringify(current) === JSON.stringify(value) ? current : value)
+        setLayoutStyle(value.layout || 'center')
+      }).catch(() => undefined)
     }, 2000)
     return () => window.clearInterval(timer)
   }, [])
@@ -248,6 +254,30 @@ export default function App() {
   const changeMode = (nextMode: ViewMode) => {
     setMode(nextMode)
     invoke('save_view_mode', { mode: nextMode }).catch(() => undefined)
+  }
+  const selectTheme = (id: string) => {
+    if (id === 'custom') {
+      setTheme((current) => ({ ...current, id: 'custom', name: 'Custom' }))
+      return
+    }
+    invoke<Theme>('save_theme_preset', { id }).then((value) => {
+      setTheme(value)
+      setAccent(value.accentColor)
+      setLayoutStyle(value.layout)
+    }).catch(() => undefined)
+  }
+  const updateCustomTheme = (field: keyof Theme, value: string) => {
+    setTheme((current) => ({ ...current, id: 'custom', name: 'Custom', [field]: value }))
+    if (field === 'accentColor') setAccent(value)
+  }
+  const saveCustomTheme = () => {
+    invoke('save_theme', { theme }).catch(() => undefined)
+  }
+  const selectLayout = (style: string) => {
+    invoke<Theme>('save_layout', { style }).then((value) => {
+      setTheme(value)
+      setLayoutStyle(value.layout)
+    }).catch(() => undefined)
   }
   const stopDrag = (event: React.MouseEvent) => {
     event.preventDefault()
@@ -258,7 +288,7 @@ export default function App() {
     else await appWindow.maximize()
   }
 
-  return <main className={`app-shell mode-${mode}`} style={{
+  return <main className={`app-shell mode-${mode} layout-${layoutStyle}`} style={{
     '--accent': accent, '--background': theme.backgroundColor, '--secondary': theme.secondaryBackground,
     '--text': theme.textColor, '--muted': theme.mutedTextColor, '--font': theme.fontFamily,
     '--title-size': theme.titleSize, '--artist-size': theme.artistSize, '--lyric-size': theme.lyricSize,
@@ -317,6 +347,34 @@ export default function App() {
                 <input type="radio" name="view-mode" checked={mode === item} onChange={() => changeMode(item)} />
                 {item[0].toUpperCase() + item.slice(1)}
               </label>)}
+            <label className="settings-field">Theme
+              <select value={theme.id} onChange={(event) => selectTheme(event.target.value)}>
+                <option value="spotify-dark">Spotify Dark</option>
+                <option value="midnight">Midnight</option>
+                <option value="sunset">Sunset</option>
+                <option value="ocean">Ocean</option>
+                <option value="light">Light Mode</option>
+                <option value="neon">Neon</option>
+                <option value="custom">Custom...</option>
+              </select>
+            </label>
+            {theme.id === 'custom' && <div className="custom-theme-editor">
+              <label>Accent <input type="color" value={theme.accentColor} onChange={(event) => updateCustomTheme('accentColor', event.target.value)} /></label>
+              <label>Background <input type="color" value={theme.backgroundColor} onChange={(event) => updateCustomTheme('backgroundColor', event.target.value)} /></label>
+              <label>Text <input type="color" value={theme.textColor} onChange={(event) => updateCustomTheme('textColor', event.target.value)} /></label>
+              <label>Blur <input type="range" min="0" max="80" value={parseInt(theme.blurAmount, 10)} onChange={(event) => updateCustomTheme('blurAmount', `${event.target.value}px`)} /></label>
+              <label>Lyrics size <input type="range" min="20" max="64" value={parseInt(theme.lyricSize, 10)} onChange={(event) => updateCustomTheme('lyricSize', `${event.target.value}px`)} /></label>
+              <button onClick={saveCustomTheme}>Save custom theme</button>
+            </div>}
+            <label className="settings-field">Layout
+              <select value={layoutStyle} onChange={(event) => selectLayout(event.target.value)}>
+                <option value="center">Centered</option>
+                <option value="left-aligned">Left Aligned</option>
+                <option value="split">Split</option>
+                <option value="minimal">Minimal</option>
+                <option value="cinematic">Cinematic</option>
+              </select>
+            </label>
             <label><input type="checkbox" checked={alwaysOnTop} onChange={(event) => { setAlwaysOnTop(event.target.checked); void appWindow.setAlwaysOnTop(event.target.checked) }} /> Always on top</label>
             <button onClick={() => setSettingsOpen(false)}>Close</button>
           </div>}

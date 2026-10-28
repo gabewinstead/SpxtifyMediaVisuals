@@ -47,6 +47,8 @@ pub fn run() {
             media_session::get_current_track,
             settings::get_theme,
             settings::save_theme,
+            settings::save_theme_preset,
+            settings::save_layout,
             settings::get_view_mode,
             settings::save_view_mode
         ])

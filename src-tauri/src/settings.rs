@@ -4,6 +4,10 @@ use std::{fs, path::PathBuf};
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Theme {
+    #[serde(default = "default_theme_id")]
+    pub id: String,
+    #[serde(default = "default_theme_name")]
+    pub name: String,
     pub accent_color: String,
     pub background_color: String,
     pub secondary_background: String,
@@ -16,11 +20,19 @@ pub struct Theme {
     pub panel_opacity: f32,
     pub blur_amount: String,
     pub border_radius: String,
+    #[serde(default = "default_layout")]
+    pub layout: String,
 }
+
+fn default_theme_id() -> String { "spotify-dark".to_string() }
+fn default_theme_name() -> String { "Spotify Dark".to_string() }
+fn default_layout() -> String { "center".to_string() }
 
 impl Default for Theme {
     fn default() -> Self {
         Self {
+            id: default_theme_id(),
+            name: default_theme_name(),
             accent_color: "#1DB954".to_string(),
             background_color: "#121212".to_string(),
             secondary_background: "#181818".to_string(),
@@ -33,6 +45,7 @@ impl Default for Theme {
             panel_opacity: 0.72,
             blur_amount: "42px".to_string(),
             border_radius: "12px".to_string(),
+            layout: default_layout(),
         }
     }
 }
@@ -62,6 +75,40 @@ pub fn save_theme(theme: Theme) -> Result<(), String> {
     let path = settings_dir()?.join("theme.json");
     fs::write(path, serde_json::to_string_pretty(&theme).map_err(|error| error.to_string())?)
         .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn save_theme_preset(id: String) -> Result<Theme, String> {
+    let mut theme = Theme::default();
+    let (name, background, secondary, text, muted, accent, layout) = match id.as_str() {
+        "midnight" => ("Midnight", "#0a0a1a", "#14142b", "#F5F3FF", "#AAA7C7", "#6366F1", "cinematic"),
+        "sunset" => ("Sunset", "#1a0a0a", "#2b1414", "#FFF7ED", "#FDBA74", "#F97316", "center"),
+        "ocean" => ("Ocean", "#0a1a1a", "#102727", "#ECFEFF", "#A5F3FC", "#06B6D4", "split"),
+        "light" => ("Light Mode", "#f5f5f5", "#FFFFFF", "#1a1a1a", "#5B5B5B", "#1DB954", "minimal"),
+        "neon" => ("Neon", "#0a0a0a", "#171717", "#FFFFFF", "#A3A3A3", "#FF00FF", "left-aligned"),
+        _ => ("Spotify Dark", "#121212", "#181818", "#FFFFFF", "#B3B3B3", "#1DB954", "center"),
+    };
+    theme.id = id;
+    theme.name = name.to_string();
+    theme.background_color = background.to_string();
+    theme.secondary_background = secondary.to_string();
+    theme.text_color = text.to_string();
+    theme.muted_text_color = muted.to_string();
+    theme.accent_color = accent.to_string();
+    theme.layout = layout.to_string();
+    save_theme(theme.clone())?;
+    Ok(theme)
+}
+
+#[tauri::command]
+pub fn save_layout(style: String) -> Result<Theme, String> {
+    if !["center", "left-aligned", "split", "minimal", "cinematic"].contains(&style.as_str()) {
+        return Err("Invalid layout style".to_string());
+    }
+    let mut theme = get_theme()?;
+    theme.layout = style;
+    save_theme(theme.clone())?;
+    Ok(theme)
 }
 
 #[tauri::command]
