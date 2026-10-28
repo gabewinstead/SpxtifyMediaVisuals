@@ -150,6 +150,14 @@ export default function App() {
     setMode(nextMode)
     invoke('save_view_mode', { mode: nextMode }).catch(() => undefined)
   }
+  const stopDrag = (event: React.MouseEvent) => {
+    event.preventDefault()
+    event.stopPropagation()
+  }
+  const toggleMaximize = async () => {
+    if (await appWindow.isMaximized()) await appWindow.unmaximize()
+    else await appWindow.maximize()
+  }
   return <main className={`app-shell mode-${mode}`} style={{
     '--accent': accent, '--background': theme.backgroundColor, '--secondary': theme.secondaryBackground,
     '--text': theme.textColor, '--muted': theme.mutedTextColor, '--font': theme.fontFamily,
@@ -158,14 +166,22 @@ export default function App() {
     opacity: windowOpacity,
   } as React.CSSProperties}>
     {(mode === 'lyrics' || mode === 'combined') && <AlbumArtBackground image={track.albumArtUrl || artwork} accent={accent} />}
-    <section className="overlay" data-tauri-drag-region>
-      <header className="top-bar" data-tauri-drag-region>
+    <header className="top-bar" data-tauri-drag-region>
+      <div className="view-mode-buttons" data-tauri-drag-region="false">
+        {(['lyrics', 'album', 'combined'] as ViewMode[]).map((item) =>
+          <button data-tauri-drag-region="false" className={mode === item ? 'selected' : ''} key={item} onMouseDown={stopDrag} onClick={() => changeMode(item)}>
+            {item[0].toUpperCase() + item.slice(1)}
+          </button>)}
+      </div>
+      <div className="window-actions" data-tauri-drag-region="false">
+        <button data-tauri-drag-region="false" onMouseDown={stopDrag} onClick={() => void appWindow.minimize()} aria-label="Minimize" title="Minimize">−</button>
+        <button data-tauri-drag-region="false" onMouseDown={stopDrag} onClick={() => void toggleMaximize()} aria-label="Maximize" title="Maximize">□</button>
+        <button data-tauri-drag-region="false" onMouseDown={stopDrag} onClick={() => void appWindow.close()} aria-label="Close" title="Close">×</button>
+      </div>
+    </header>
+    <section className="overlay">
+      <div className="view-content">
         {hasTrack && mode === 'lyrics' && <div className="track-header"><strong>{track.title}</strong><span>{track.artist}</span></div>}
-        <div className="window-actions" data-tauri-drag-region="false">
-          <button onClick={() => appWindow.toggleMaximize()} aria-label="Maximize">□</button>
-          <button onClick={() => appWindow.close()} aria-label="Close">×</button>
-        </div>
-      </header>
       {mode === 'lyrics' || mode === 'combined'
         ? hasTrack
           ? <div className={`lyrics-content ${mode === 'combined' ? 'combined-content' : ''} ${track.playing ? 'is-playing' : 'is-paused'}`}>
@@ -182,6 +198,7 @@ export default function App() {
             {track.albumArtUrl || artwork ? <img className="cover-art" src={track.albumArtUrl || artwork} alt="" /> : <div className="cover-placeholder" />}
             <div className="track-info"><h1>{hasTrack ? track.title : 'Waiting for playback'}</h1><p>{hasTrack ? track.artist : ''}</p></div>
           </div>}
+      </div>
       <footer className="bottom-bar" data-tauri-drag-region="false">
         <ProgressBar position={track.position} duration={track.duration} accent={accent} />
         <div className="playback-row">
@@ -196,9 +213,6 @@ export default function App() {
         <div className="settings-wrap">
           <button className="settings-button" onClick={() => setSettingsOpen((open) => !open)} aria-label="Settings">⚙</button>
           {settingsOpen && <div className="settings-panel">
-            <span>View</span>
-            {(['lyrics', 'album', 'combined'] as ViewMode[]).map((item) =>
-              <button className={mode === item ? 'selected' : ''} key={item} onClick={() => changeMode(item)}>{item[0].toUpperCase() + item.slice(1)}</button>)}
             <label><input type="checkbox" checked={karaoke} onChange={(event) => setKaraoke(event.target.checked)} /> Karaoke</label>
             <label>Opacity <input type="range" min="0.5" max="1" step="0.05" value={windowOpacity} onChange={(event) => setWindowOpacity(Number(event.target.value))} /></label>
             <label><input type="checkbox" checked={alwaysOnTop} onChange={(event) => { setAlwaysOnTop(event.target.checked); void appWindow.setAlwaysOnTop(event.target.checked) }} /> Always on top</label>
