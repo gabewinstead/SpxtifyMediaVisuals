@@ -1,0 +1,14 @@
+{
+  "accentColor": "#1DB954",
+  "backgroundColor": "#121212",
+  "secondaryBackground": "#181818",
+  "textColor": "#FFFFFF",
+  "mutedTextColor": "#B3B3B3",
+  "fontFamily": "Inter, Arial, sans-serif",
+  "titleSize": "32px",
+  "artistSize": "18px",
+  "lyricSize": "42px",
+  "panelOpacity": 0.72,
+  "blurAmount": "42px",
+  "borderRadius": "12px"
+}
