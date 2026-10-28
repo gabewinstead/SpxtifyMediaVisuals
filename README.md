@@ -22,7 +22,7 @@ A frameless, always-on-top Spotify lyrics and now-playing overlay for Windows an
 
 ## Quick Start
 
-Clone the repository, run `SpotifyMediaVisuals.exe` from the root, or build from source:
+Clone the repository, double-click `SpotifyLyricsOverlay.exe` from the root, or build from source:
 
 ```bash
 npm install
