@@ -8,7 +8,10 @@ button { font: inherit; }
 .art-background::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, #12121288, var(--background) 92%); }
 .overlay { position: relative; z-index: 1; height: 100vh; display: flex; flex-direction: column; padding: 18px 5vw 25px; background: linear-gradient(180deg, #00000014, #0000003d); }
 .mode-lyrics .overlay { background: linear-gradient(180deg, #12121266 0%, #090909aa 100%); }
-.top-bar { height: 30px; display: flex; justify-content: flex-end; }
+.top-bar { min-height: 30px; display: flex; align-items: flex-start; justify-content: space-between; }
+.track-header { display: flex; flex-direction: column; gap: 2px; max-width: 55%; overflow: hidden; }
+.track-header strong { overflow: hidden; color: var(--text); font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+.track-header span { overflow: hidden; color: var(--muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .window-actions { display: flex; gap: 5px; }
 .window-actions button { width: 28px; height: 26px; border: 0; border-radius: 6px; color: var(--muted); background: #ffffff0b; cursor: pointer; }
 .window-actions button:hover { color: var(--text); background: #ffffff1b; }
@@ -16,6 +19,9 @@ button { font: inherit; }
 .cover-art, .cover-placeholder { width: 300px; height: 300px; object-fit: cover; border-radius: var(--radius); box-shadow: 0 24px 70px #00000088; }
 .cover-placeholder { background: linear-gradient(135deg, var(--secondary), #080808); }
 .track-info { text-align: center; }
+.lyrics-track-info { position: absolute; top: 62px; left: 5vw; text-align: left; }
+.lyrics-track-info h1 { margin: 0; color: var(--text); font-size: 24px; font-weight: 700; }
+.lyrics-track-info p { margin: 5px 0 0; color: var(--muted); font-size: 18px; }
 .track-info h1 { margin: 0; color: var(--text); font-size: 24px; font-weight: 700; letter-spacing: -.03em; }
 .track-info p { margin: 8px 0 0; color: var(--muted); font-size: var(--artist-size); }
 .lyrics-list { flex: 1; overflow: auto; scrollbar-width: none; padding: 28vh 10vw; text-align: center; }

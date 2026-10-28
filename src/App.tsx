@@ -73,6 +73,30 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    let active = true
+    const refreshTrack = () => {
+      invoke<Track>('get_current_track')
+        .then((current) => {
+          if (active && (current.title || current.artist)) {
+            setTrack((previous) => ({
+              ...previous,
+              ...current,
+              position: current.position,
+              duration: current.duration,
+            }))
+          }
+        })
+        .catch(() => undefined)
+    }
+    refreshTrack()
+    const timer = window.setInterval(refreshTrack, 1000)
+    return () => {
+      active = false
+      window.clearInterval(timer)
+    }
+  }, [])
+
+  useEffect(() => {
     invoke<Theme>('get_theme').then((value) => setTheme(value)).catch(() => undefined)
     invoke<string>('get_view_mode').then((value) => setMode(value === 'album' || value === 'combined' ? value : 'lyrics')).catch(() => undefined)
   }, [])
@@ -110,6 +134,7 @@ export default function App() {
     {(mode === 'lyrics' || mode === 'combined') && <AlbumArtBackground image={artwork} accent={accent} />}
     <section className="overlay" data-tauri-drag-region>
       <header className="top-bar" data-tauri-drag-region>
+        {hasTrack && <div className="track-header"><strong>{track.title}</strong><span>{track.artist}</span></div>}
         <div className="window-actions" data-tauri-drag-region="false">
           <button onClick={() => appWindow.toggleMaximize()} aria-label="Maximize">□</button>
           <button onClick={() => appWindow.close()} aria-label="Close">×</button>
@@ -117,7 +142,7 @@ export default function App() {
       </header>
       {mode === 'lyrics' || mode === 'combined'
         ? hasTrack
-          ? <LyricsDisplay lines={lines} activeIndex={activeIndex} accent={accent} karaoke={karaoke} />
+          ? <><div className="lyrics-track-info"><h1>{track.title}</h1><p>{track.artist}</p></div><LyricsDisplay lines={lines} activeIndex={activeIndex} accent={accent} karaoke={karaoke} /></>
           : <IdleState accent={accent} />
         : <div className="now-playing">
             {artwork ? <img className="cover-art" src={artwork} alt="" /> : <div className="cover-placeholder" />}
