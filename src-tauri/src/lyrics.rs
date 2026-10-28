@@ -8,6 +8,8 @@ static CACHE: Lazy<Mutex<HashMap<String, String>>> = Lazy::new(|| Mutex::new(Has
 struct Response {
     #[serde(default, alias = "syncedLyrics")]
     synced_lyrics: Option<String>,
+    #[serde(default, alias = "plainLyrics")]
+    plain_lyrics: Option<String>,
 }
 
 async fn request_lyrics(
@@ -31,7 +33,9 @@ async fn request_lyrics(
         .query(&query)
         .send().await.ok()?.error_for_status().ok()?
         .json::<Response>().await.ok()?;
-    response.synced_lyrics.filter(|lyrics| !lyrics.trim().is_empty())
+    response.synced_lyrics
+        .or(response.plain_lyrics)
+        .filter(|lyrics| !lyrics.trim().is_empty())
 }
 
 async fn search_lyrics(client: &reqwest::Client, artist: &str, track: &str) -> Option<String> {
@@ -39,12 +43,33 @@ async fn search_lyrics(client: &reqwest::Client, artist: &str, track: &str) -> O
     struct SearchResponse {
         #[serde(default, alias = "syncedLyrics")]
         synced_lyrics: Option<String>,
+        #[serde(default, alias = "plainLyrics")]
+        plain_lyrics: Option<String>,
     }
     let results = client.get("https://lrclib.net/api/search")
         .query(&[("artist_name", artist), ("track_name", track)])
         .send().await.ok()?.error_for_status().ok()?
         .json::<Vec<SearchResponse>>().await.ok()?;
-    results.into_iter().find_map(|result| result.synced_lyrics.filter(|lyrics| !lyrics.trim().is_empty()))
+    results.into_iter().find_map(|result| result.synced_lyrics
+        .or(result.plain_lyrics)
+        .filter(|lyrics| !lyrics.trim().is_empty()))
+}
+
+async fn qobuzify_lyrics(client: &reqwest::Client, artist: &str, track: &str) -> Option<String> {
+    #[derive(Deserialize)]
+    struct QobuzifyResponse {
+        #[serde(default, alias = "syncedLyrics")]
+        synced_lyrics: Option<String>,
+        #[serde(default)]
+        lyrics: Option<String>,
+    }
+    let response = client.get("https://api.qobuzify.app/v2/track")
+        .query(&[("name", track), ("artist", artist)])
+        .send().await.ok()?.error_for_status().ok()?
+        .json::<QobuzifyResponse>().await.ok()?;
+    response.synced_lyrics
+        .or(response.lyrics)
+        .filter(|lyrics| !lyrics.trim().is_empty())
 }
 
 #[tauri::command]
@@ -57,8 +82,10 @@ pub async fn fetch_lyrics(app: AppHandle, artist: String, track: String, album: 
     let client = reqwest::Client::new();
     let lyrics = if let Some(value) = request_lyrics(&client, &artist, &track, &album, duration).await {
         value
+    } else if let Some(value) = search_lyrics(&client, &artist, &track).await {
+        value
     } else {
-        search_lyrics(&client, &artist, &track).await.unwrap_or_default()
+        qobuzify_lyrics(&client, &artist, &track).await.unwrap_or_default()
     };
     if !lyrics.is_empty() {
         CACHE.lock().map_err(|e| e.to_string())?.insert(key, lyrics.clone());

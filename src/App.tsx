@@ -12,6 +12,7 @@ import { fetchArtwork } from './utils/artwork'
 type ViewMode = 'lyrics' | 'album' | 'combined'
 type Track = { title: string; artist: string; album?: string; albumArtUrl?: string; duration: number; position: number; playing: boolean }
 type TrackPayload = Partial<Track> & { album_art_url?: string }
+type LyricsPayload = string | LyricLine[]
 type Theme = {
   accentColor: string; backgroundColor: string; secondaryBackground: string
   textColor: string; mutedTextColor: string; fontFamily: string; titleSize: string
@@ -23,6 +24,16 @@ const defaultTheme: Theme = {
   textColor: '#FFFFFF', mutedTextColor: '#B3B3B3', fontFamily: 'Inter, Arial, sans-serif',
   titleSize: '32px', artistSize: '18px', lyricSize: '42px', panelOpacity: 0.72,
   blurAmount: '42px', borderRadius: '12px',
+}
+
+function parseLyricsPayload(payload: LyricsPayload): LyricLine[] {
+  if (Array.isArray(payload)) return payload
+  const parsed = parseLrc(payload)
+  if (parsed.length > 0) return parsed
+  return payload.split(/\r?\n/).map((text, index) => ({
+    time: index * 3,
+    text: text.trim(),
+  })).filter((line) => line.text.length > 0)
 }
 
 /** Renders the now-playing overlay and its runtime-selectable presentation modes. */
@@ -57,9 +68,7 @@ export default function App() {
         }))
       }),
       listen<Partial<Track>>('position-updated', (event) => setTrack((current) => ({ ...current, ...event.payload }))),
-      listen<string | LyricLine[]>('lyrics-received', (event) => {
-        setLines(Array.isArray(event.payload) ? event.payload : parseLrc(event.payload))
-      }),
+      listen<LyricsPayload>('lyrics-received', (event) => setLines(parseLyricsPayload(event.payload))),
     ]).then(([stopTrack, stopPosition, stopLyrics]) => {
       if (disposed) {
         stopTrack()
@@ -119,10 +128,12 @@ export default function App() {
     if (!track.title || !track.artist) { setLines([]); setArtwork(undefined); return undefined }
     let active = true
     Promise.all([
-      invoke('fetch_lyrics', { artist: track.artist, track: track.title, album: track.album ?? '', duration: track.duration }),
+      invoke<string>('fetch_lyrics', { artist: track.artist, track: track.title, album: track.album ?? '', duration: track.duration }),
       Promise.resolve(track.albumArtUrl || fetchArtwork(track.title, track.artist)),
-    ]).then(([, image]) => {
-      if (active && typeof image === 'string') setArtwork(image)
+    ]).then(([lyrics, image]) => {
+      if (!active) return
+      setLines(parseLyricsPayload(lyrics))
+      if (typeof image === 'string') setArtwork(image)
     }).catch(() => { if (active) setLines([]) })
     return () => { active = false }
   }, [track.title, track.artist, track.album, track.duration])
@@ -149,7 +160,7 @@ export default function App() {
     {(mode === 'lyrics' || mode === 'combined') && <AlbumArtBackground image={track.albumArtUrl || artwork} accent={accent} />}
     <section className="overlay" data-tauri-drag-region>
       <header className="top-bar" data-tauri-drag-region>
-        {hasTrack && <div className="track-header"><strong>{track.title}</strong><span>{track.artist}</span></div>}
+        {hasTrack && mode === 'lyrics' && <div className="track-header"><strong>{track.title}</strong><span>{track.artist}</span></div>}
         <div className="window-actions" data-tauri-drag-region="false">
           <button onClick={() => appWindow.toggleMaximize()} aria-label="Maximize">□</button>
           <button onClick={() => appWindow.close()} aria-label="Close">×</button>
@@ -157,7 +168,15 @@ export default function App() {
       </header>
       {mode === 'lyrics' || mode === 'combined'
         ? hasTrack
-          ? <><div className="lyrics-track-info"><h1>{track.title}</h1><p>{track.artist}</p></div><LyricsDisplay lines={lines} activeIndex={activeIndex} accent={accent} karaoke={karaoke} /></>
+          ? <div className={`lyrics-content ${mode === 'combined' ? 'combined-content' : ''} ${track.playing ? 'is-playing' : 'is-paused'}`}>
+              {mode === 'combined' && <div className="combined-track-card">
+                {(track.albumArtUrl || artwork) && <img src={track.albumArtUrl || artwork} alt="" />}
+                <div><h1>{track.title}</h1><p>{track.artist}</p></div>
+              </div>}
+              {mode === 'lyrics' && <div className="lyrics-track-info"><h1>{track.title}</h1><p>{track.artist}</p></div>}
+              <LyricsDisplay lines={lines} activeIndex={activeIndex} accent={accent} karaoke={karaoke} />
+              {mode === 'combined' && <div className="combined-vignette" />}
+            </div>
           : <IdleState accent={accent} />
         : <div className="now-playing">
             {track.albumArtUrl || artwork ? <img className="cover-art" src={track.albumArtUrl || artwork} alt="" /> : <div className="cover-placeholder" />}

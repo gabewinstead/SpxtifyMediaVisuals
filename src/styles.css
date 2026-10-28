@@ -22,6 +22,15 @@ button { font: inherit; }
 .lyrics-track-info { position: absolute; top: 62px; left: 5vw; text-align: left; }
 .lyrics-track-info h1 { margin: 0; color: var(--text); font-size: 24px; font-weight: 700; }
 .lyrics-track-info p { margin: 5px 0 0; color: var(--muted); font-size: 18px; }
+.lyrics-content { position: relative; display: flex; flex: 1; min-height: 0; flex-direction: column; transition: opacity .3s ease; }
+.lyrics-content.is-paused { opacity: .5; }
+.combined-content { margin: -18px -5vw -25px; padding: 20px 5vw 25px; }
+.combined-content::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,.5) 100%); pointer-events: none; }
+.combined-track-card { position: relative; z-index: 2; display: flex; align-items: center; gap: 12px; width: fit-content; max-width: 60%; }
+.combined-track-card img { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; box-shadow: 0 4px 12px rgba(0,0,0,.5); }
+.combined-track-card h1 { margin: 0; color: var(--text); font-size: 16px; font-weight: 600; }
+.combined-track-card p { margin: 3px 0 0; color: var(--muted); font-size: 13px; }
+.combined-content .lyrics-list { position: relative; z-index: 1; width: 100%; padding: 20vh 10vw 12vh; }
 .track-info h1 { margin: 0; color: var(--text); font-size: 24px; font-weight: 700; letter-spacing: -.03em; }
 .track-info p { margin: 8px 0 0; color: var(--muted); font-size: var(--artist-size); }
 .lyrics-list { flex: 1; overflow: auto; scrollbar-width: none; padding: 28vh 10vw; text-align: center; }
