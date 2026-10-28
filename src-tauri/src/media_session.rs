@@ -87,8 +87,10 @@ pub fn start(app: AppHandle) {
             }
         };
         let mut last_key = String::new();
+        let mut missed_sessions = 0u8;
         loop {
             if let Ok(session) = manager.GetCurrentSession() {
+                missed_sessions = 0;
                 let properties = session
                     .TryGetMediaPropertiesAsync()
                     .and_then(|operation| operation.get());
@@ -101,11 +103,8 @@ pub fn start(app: AppHandle) {
                         .and_then(|info| info.PlaybackStatus().ok())
                         == Some(GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing);
                     let key = format!("{title}::{artist}");
-                    eprintln!("[SMTC] title={title:?} artist={artist:?} playing={playing}");
-
                     if key != last_key || (last_key.is_empty() && !title.is_empty()) {
                         last_key = key;
-                        eprintln!("[SMTC] emitting track-changed");
                         let _ = app.emit(
                             "track-changed",
                             Track {
@@ -133,8 +132,12 @@ pub fn start(app: AppHandle) {
                     }
                 }
             } else if !last_key.is_empty() {
-                last_key.clear();
-                let _ = app.emit("track-changed", Track::default());
+                missed_sessions = missed_sessions.saturating_add(1);
+                if missed_sessions >= 3 {
+                    last_key.clear();
+                    missed_sessions = 0;
+                    let _ = app.emit("track-changed", Track::default());
+                }
             }
             std::thread::sleep(Duration::from_millis(500));
         }

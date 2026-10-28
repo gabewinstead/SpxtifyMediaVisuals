@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { AlbumArtBackground } from './components/AlbumArtBackground'
 import { LyricsDisplay } from './components/LyricsDisplay'
 import { ProgressBar } from './components/ProgressBar'
-import { useMediaSession } from './hooks/useMediaSession'
 import { activeLyricIndex, parseLrc, type LyricLine } from './utils/lrcParser'
 import { extractDominantColor } from './utils/colorExtract'
 import { fetchArtwork } from './utils/artwork'
 
 type ViewMode = 'lyrics' | 'album' | 'combined'
+type Track = { title: string; artist: string; albumArtUrl?: string; duration: number; position: number; playing: boolean }
 type Theme = {
   accentColor: string; backgroundColor: string; secondaryBackground: string
   textColor: string; mutedTextColor: string; fontFamily: string; titleSize: string
@@ -25,8 +26,8 @@ const defaultTheme: Theme = {
 
 /** Renders the now-playing overlay and its runtime-selectable presentation modes. */
 export default function App() {
-  const track = useMediaSession()
   const appWindow = getCurrentWindow()
+  const [track, setTrack] = useState<Track>({ title: '', artist: '', duration: 0, position: 0, playing: false })
   const [lines, setLines] = useState<LyricLine[]>([])
   const [artwork, setArtwork] = useState<string>()
   const [accent, setAccent] = useState(defaultTheme.accentColor)
@@ -40,6 +41,36 @@ export default function App() {
   const hasTrack = Boolean(track.title && track.artist)
 
   useEffect(() => {
+    let unlistenTrack: (() => void) | undefined
+    let unlistenPosition: (() => void) | undefined
+    let unlistenLyrics: (() => void) | undefined
+    let disposed = false
+
+    Promise.all([
+      listen<Track>('track-changed', (event) => setTrack(event.payload)),
+      listen<Partial<Track>>('position-updated', (event) => setTrack((current) => ({ ...current, ...event.payload }))),
+      listen<string>('lyrics-received', (event) => setLines(parseLrc(event.payload))),
+    ]).then(([stopTrack, stopPosition, stopLyrics]) => {
+      if (disposed) {
+        stopTrack()
+        stopPosition()
+        stopLyrics()
+      } else {
+        unlistenTrack = stopTrack
+        unlistenPosition = stopPosition
+        unlistenLyrics = stopLyrics
+      }
+    })
+
+    return () => {
+      disposed = true
+      unlistenTrack?.()
+      unlistenPosition?.()
+      unlistenLyrics?.()
+    }
+  }, [])
+
+  useEffect(() => {
     invoke<Theme>('get_theme').then((value) => setTheme(value)).catch(() => undefined)
     invoke<string>('get_view_mode').then((value) => setMode(value === 'album' || value === 'combined' ? value : 'lyrics')).catch(() => undefined)
   }, [])
@@ -47,10 +78,10 @@ export default function App() {
     if (!track.title || !track.artist) { setLines([]); setArtwork(undefined); return undefined }
     let active = true
     Promise.all([
-      invoke<string>('fetch_lyrics', { artist: track.artist, track: track.title }),
+      invoke('fetch_lyrics', { artist: track.artist, track: track.title }),
       fetchArtwork(track.title, track.artist),
-    ]).then(([lrc, image]) => {
-      if (active) { setLines(parseLrc(lrc)); setArtwork(image) }
+    ]).then(([, image]) => {
+      if (active) setArtwork(image)
     }).catch(() => { if (active) setLines([]) })
     return () => { active = false }
   }, [track.title, track.artist])
