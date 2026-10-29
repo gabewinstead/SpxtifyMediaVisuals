@@ -89,11 +89,6 @@ npm run tauri build
 
 The Windows NSIS installer is written to `src-tauri/target/release/bundle/nsis/`. Release builds also generate a signed updater artifact; the GitHub Actions workflow publishes it and refreshes [`latest.json`](./latest.json).
 
-### Automatic updates
-
-Installed native builds check the signed `latest.json` manifest shortly after launch. When a newer version is available, the app downloads the matching signed Windows installer, installs it, and relaunches automatically. Users can also open Settings and choose **Check for updates**.
-
-For an update to be accepted, publish a version tag such as `v0.2.0` through the GitHub Actions workflow. The release must include both the `.exe` installer and its `.sig` signature, and the repository secret `TAURI_SIGNING_PRIVATE_KEY` must match the public key in [`src-tauri/tauri.conf.json`](./src-tauri/tauri.conf.json).
 
 ## Personalize everything
 
