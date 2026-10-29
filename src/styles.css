@@ -313,6 +313,7 @@ button:focus:not(:focus-visible) { outline: none; }
   transition: background .2s var(--ease-out), border-color .2s var(--ease-out);
 }
 .settings-panel button:hover { background: var(--glass-hover); border-color: var(--glass-border); }
+.settings-panel .update-status { padding: 2px 8px 4px; color: var(--muted); font-size: 11px; text-transform: none; letter-spacing: 0; }
 .settings-panel button.selected {
   color: var(--text);
   background: rgba(255, 255, 255, 0.14);

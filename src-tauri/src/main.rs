@@ -38,6 +38,8 @@ pub fn run() {
     }
 
     let result = tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
             lyrics::fetch_lyrics,
             media_session::media_play_pause,

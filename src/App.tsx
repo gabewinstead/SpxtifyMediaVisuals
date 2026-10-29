@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { getCurrentWindow } from '@tauri-apps/api/window'
+import { check } from '@tauri-apps/plugin-updater'
+import { relaunch } from '@tauri-apps/plugin-process'
 import { AlbumArtBackground } from './components/AlbumArtBackground'
 import { LyricsDisplay } from './components/LyricsDisplay'
 import { ProgressBar } from './components/ProgressBar'
@@ -87,8 +89,28 @@ export default function App() {
   const windowOpacity = 1
   const [alwaysOnTop, setAlwaysOnTop] = useState(true)
   const [lyricsLoading, setLyricsLoading] = useState(false)
+  const [updateStatus, setUpdateStatus] = useState('')
   const activeIndex = useMemo(() => activeLyricIndex(lines, track.position + 0.3), [lines, track.position])
   const hasTrack = Boolean(track.title.trim())
+
+  const installUpdate = async (notifyWhenCurrent: boolean) => {
+    try {
+      const update = await check()
+      if (!update) {
+        if (notifyWhenCurrent) setUpdateStatus('You are on the latest version.')
+        return
+      }
+      setUpdateStatus(`Downloading version ${update.version}...`)
+      await update.downloadAndInstall()
+      await relaunch()
+    } catch {
+      if (notifyWhenCurrent) setUpdateStatus('Update check failed. Try again later.')
+    }
+  }
+
+  useEffect(() => {
+    void installUpdate(false)
+  }, [])
 
   // Event listeners
   useEffect(() => {
@@ -363,6 +385,8 @@ export default function App() {
               </select>
             </label>
             <label><input type="checkbox" checked={alwaysOnTop} onChange={(event) => { setAlwaysOnTop(event.target.checked); void appWindow.setAlwaysOnTop(event.target.checked) }} /> Always on top</label>
+            <button onClick={() => void installUpdate(true)}>Check for updates</button>
+            {updateStatus && <span className="update-status" role="status">{updateStatus}</span>}
             <button onClick={() => setSettingsOpen(false)}>Close</button>
           </div>}
         </div>

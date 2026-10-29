@@ -37,6 +37,17 @@ npm run tauri build
 ```
 
 The Windows NSIS installer is written to `src-tauri/target/release/bundle/nsis/`.
+The installer includes the MIT license agreement. Release builds also generate a
+signed updater artifact; the GitHub Actions workflow publishes it and refreshes
+[`latest.json`](./latest.json).
+
+### GitHub updates
+
+The updater reads release metadata from this repository's `latest.json`. To
+publish a signed update, store the contents of the local Tauri private key in
+the repository secret `TAURI_SIGNING_PRIVATE_KEY` (and set
+`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` only if the key is password protected),
+then push a version tag such as `v0.2.0`. Never commit the private key.
 
 ## Configuration
 

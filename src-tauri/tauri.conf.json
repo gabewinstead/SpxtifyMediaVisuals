@@ -5,5 +5,25 @@
   "identifier": "com.spotify.media.visuals",
   "build": { "beforeDevCommand": "npm run dev", "devUrl": "http://localhost:1420", "beforeBuildCommand": "npm run build", "frontendDist": "../dist" },
   "app": { "windows": [{ "label": "main", "title": "Now Playing", "width": 1280, "height": 800, "minWidth": 400, "minHeight": 300, "fullscreen": false, "decorations": false, "transparent": true, "alwaysOnTop": true, "resizable": true, "center": true }], "security": { "csp": "default-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self' https://lrclib.net https://itunes.apple.com; font-src 'self' https://fonts.gstatic.com" } },
-  "bundle": { "active": true, "targets": ["nsis", "appimage", "deb"], "icon": ["icons/icon.ico", "icons/icon.png"] }
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "appimage", "deb"],
+    "icon": ["icons/icon.ico", "icons/icon.png"],
+    "license": "MIT",
+    "licenseFile": "license.rtf",
+    "createUpdaterArtifacts": true,
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDgwOTdBNTlDRjJENTJDRkUKUldUK0xOWHluS1dYZ0h1aTYyN3hLNlZaaU4vOFJKWFhtNGJTNGRrL0NBOFhWRk80WlQzNG11ZFcK",
+      "endpoints": [
+        "https://raw.githubusercontent.com/gabewinstead/SpxtifyMediaVisuals/main/latest.json"
+      ]
+    }
+  }
 }

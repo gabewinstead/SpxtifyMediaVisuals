@@ -1,0 +1,11 @@
+{
+  "version": "0.1.0",
+  "notes": "Initial signed release.",
+  "pub_date": "2026-10-28T00:00:00Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUK0xOWHluS1dYZ0VVVnpWSmpsNVdPNURJTjJ6U2xTSW1ScmV2ck0renlKUzB5N0FlejBKSzBTT3VNOFAvdmZ2TDFvL2N3WUd5QWVJTFkyL1RKcmFUeGYwb3FxYmxQNGdVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjM3Njg3CWZpbGU6U3BvdGlmeSBMeXJpY3MgT3ZlcmxheV8wLjEuMF94NjQtc2V0dXAuZXhlCXZlcnNpb246MC4xLjAKZ2pkN0VHVWlzQTh1VjZtcmRVak5aek83amRzazNsSUUwT3B6MVJHL3Z6S0l3b3Q3bHZPZTUvaTZySFFRcTNZMXNzbEpYWDZoZ1orOHpCYjRyWWg0RFE9PQo=",
+      "url": "https://github.com/gabewinstead/SpxtifyMediaVisuals/releases/download/v0.1.0/Spotify%20Lyrics%20Overlay_0.1.0_x64-setup.exe"
+    }
+  }
+}
