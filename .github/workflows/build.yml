@@ -49,6 +49,10 @@ jobs:
           $version = (Get-Content src-tauri/tauri.conf.json | ConvertFrom-Json).version
           $artifact = Get-ChildItem src-tauri/target/release/bundle/nsis -Filter '*-setup.exe' | Select-Object -First 1
           $signature = Get-Content "$($artifact.FullName).sig" -Raw
+          $assetName = gh release view $env:GITHUB_REF_NAME --json assets --jq '.assets[] | select(.name | endswith(".exe")) | .name'
+          if (-not $assetName) {
+            throw "Could not find the uploaded Windows installer asset in release $env:GITHUB_REF_NAME"
+          }
           $latest = @{
             version = $version
             notes = "See the GitHub release notes."
@@ -56,7 +60,7 @@ jobs:
             platforms = @{
               "windows-x86_64" = @{
                 signature = $signature.Trim()
-                url = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:GITHUB_REF_NAME/$($artifact.Name)"
+                url = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:GITHUB_REF_NAME/$([uri]::EscapeDataString($assetName))"
               }
             }
           } | ConvertTo-Json -Depth 5

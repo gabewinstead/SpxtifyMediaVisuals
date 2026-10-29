@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { invoke } from '@tauri-apps/api/core'
+import { invoke, isTauri } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { check } from '@tauri-apps/plugin-updater'
+import { check, type DownloadEvent } from '@tauri-apps/plugin-updater'
 import { relaunch } from '@tauri-apps/plugin-process'
 import { AlbumArtBackground } from './components/AlbumArtBackground'
 import { LyricsDisplay } from './components/LyricsDisplay'
@@ -65,6 +65,11 @@ function parseLyricsPayload(payload: LyricsPayload): LyricLine[] {
     time: index * 3,
     text: text.trim(),
   })).filter((line) => line.text.length > 0)
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 async function fetchLyricsDirect(artist: string, title: string): Promise<string> {
@@ -135,22 +140,44 @@ export default function App() {
   const hasTrack = Boolean(track.title.trim())
 
   const installUpdate = async (notifyWhenCurrent: boolean) => {
+    if (!isTauri()) return
+
     try {
-      const update = await check()
+      const update = await check({ timeout: 30000 })
       if (!update) {
         if (notifyWhenCurrent) setUpdateStatus('You are on the latest version.')
         return
       }
       setUpdateStatus(`Downloading version ${update.version}...`)
-      await update.downloadAndInstall()
+      let downloadedBytes = 0
+      let totalBytes: number | undefined
+      const handleDownloadEvent = (event: DownloadEvent) => {
+        if (event.event === 'Started') {
+          downloadedBytes = 0
+          totalBytes = event.data.contentLength
+          setUpdateStatus(totalBytes ? `Downloading version ${update.version} (0 MB / ${formatBytes(totalBytes)})...` : `Downloading version ${update.version}...`)
+        } else if (event.event === 'Progress') {
+          downloadedBytes += event.data.chunkLength
+          setUpdateStatus(totalBytes
+            ? `Downloading version ${update.version} (${formatBytes(downloadedBytes)} / ${formatBytes(totalBytes)})...`
+            : `Downloading version ${update.version} (${formatBytes(downloadedBytes)})...`)
+        } else {
+          setUpdateStatus('Installing update...')
+        }
+      }
+      await update.downloadAndInstall(handleDownloadEvent, { timeout: 10 * 60 * 1000 })
       await relaunch()
-    } catch {
+    } catch (error) {
+      console.error('Update check or installation failed:', error)
       if (notifyWhenCurrent) setUpdateStatus('Update check failed. Try again later.')
     }
   }
 
   useEffect(() => {
-    void installUpdate(false)
+    const timer = window.setTimeout(() => {
+      void installUpdate(false)
+    }, 1500)
+    return () => window.clearTimeout(timer)
   }, [])
 
   // Event listeners

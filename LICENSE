@@ -1,21 +1,73 @@
-MIT License
+Spotify Lyrics Overlay — Proprietary Source-Available License
+Copyright (c) 2026 Gabe Winstead
 
-Copyright (c) 2026 klyon
+IMPORTANT: This is a custom proprietary license, not an open-source license.
+It is provided as a project-specific starting point and should be reviewed by
+a qualified attorney before distribution.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+1. Ownership
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+The Software, including its source code, artwork, branding, documentation,
+and other original materials, is owned by Gabe Winstead or its respective
+third-party licensors. No ownership or other intellectual-property rights are
+transferred by this license.
+
+2. Limited personal license
+
+Subject to the terms below, Gabe Winstead grants you a limited, revocable,
+non-exclusive, non-transferable, non-sublicensable license to:
+
+  a. view and study the source code;
+  b. run the unmodified Software for your own personal, non-commercial use;
+  c. make private modifications for your own personal, non-commercial use.
+
+3. Restrictions
+
+You may not, without prior written permission from Gabe Winstead:
+
+  a. sell, rent, lease, license, sublicense, or otherwise monetize the
+     Software or any derivative work;
+  b. use the Software or any derivative work for commercial purposes;
+  c. publish, distribute, or provide copies of the Software, its source code,
+     binaries, or derivative works;
+  d. remove or alter copyright, attribution, trademark, or license notices;
+  e. use the name "Gabe Winstead" or the project branding to imply endorsement;
+  f. claim authorship or ownership of the Software.
+
+4. Required attribution
+
+Any use permitted by written permission must identify Gabe Winstead as the
+original creator and must include a visible notice substantially similar to:
+
+  "Based on Spotify Lyrics Overlay by Gabe Winstead."
+
+Any separately approved contributor must be identified only as a contributor
+to the specific work they authored. A contributor does not become an owner of
+the Software by contributing.
+
+5. Contributions
+
+Contributions are accepted only under a separate written contributor license
+agreement or copyright assignment accepted by Gabe Winstead. By submitting a
+contribution, you represent that you have the right to submit it, but no
+license to the contribution is granted until that agreement is accepted.
+Accepted contributions must assign or exclusively license the rights needed
+for Gabe Winstead to own, use, modify, distribute, and relicense the project.
+
+6. Third-party materials
+
+This license does not replace or restrict the licenses of third-party
+dependencies, APIs, fonts, artwork, or other materials identified in the
+project. Those materials remain subject to their own terms.
+
+7. Termination
+
+This license terminates immediately if you violate its terms. On termination,
+you must stop using the Software and destroy copies in your possession.
+
+8. Warranty and liability
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+IMPLIED. TO THE MAXIMUM EXTENT PERMITTED BY LAW, GABE WINSTEAD SHALL NOT BE
+LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM THE SOFTWARE
+OR ITS USE.

@@ -5,7 +5,7 @@
   <p>
     <a href="https://github.com/gabewinstead/SpxtifyMediaVisuals/releases"><img src="https://img.shields.io/github/v/release/gabewinstead/SpxtifyMediaVisuals?style=flat-square&color=1ed760" alt="Latest release" /></a>
     <a href="https://github.com/gabewinstead/SpxtifyMediaVisuals/actions"><img src="https://img.shields.io/github/actions/workflow/status/gabewinstead/SpxtifyMediaVisuals/build.yml?style=flat-square&label=build" alt="Build status" /></a>
-    <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-111714?style=flat-square" alt="MIT license" /></a>
+    <a href="./LICENSE"><img src="https://img.shields.io/badge/license-proprietary--source--available-111714?style=flat-square" alt="Proprietary source-available license" /></a>
   </p>
 </div>
 
@@ -89,6 +89,12 @@ npm run tauri build
 
 The Windows NSIS installer is written to `src-tauri/target/release/bundle/nsis/`. Release builds also generate a signed updater artifact; the GitHub Actions workflow publishes it and refreshes [`latest.json`](./latest.json).
 
+### Automatic updates
+
+Installed native builds check the signed `latest.json` manifest shortly after launch. When a newer version is available, the app downloads the matching signed Windows installer, installs it, and relaunches automatically. Users can also open Settings and choose **Check for updates**.
+
+For an update to be accepted, publish a version tag such as `v0.2.0` through the GitHub Actions workflow. The release must include both the `.exe` installer and its `.sig` signature, and the repository secret `TAURI_SIGNING_PRIVATE_KEY` must match the public key in [`src-tauri/tauri.conf.json`](./src-tauri/tauri.conf.json).
+
 ## Personalize everything
 
 The app creates `%APPDATA%/spotify-media-visuals/theme.json` on Windows. Linux uses the equivalent per-user configuration directory.
@@ -114,11 +120,13 @@ The Rust backend polls the system media session, emits track and progress events
 
 ## Contributing
 
-Install dependencies with `npm install`, run `npm run tauri dev` while developing, and run `npm run build` before opening a pull request. See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for more detail.
+Install dependencies with `npm install`, run `npm run tauri dev` while developing, and run `npm run build` before opening a pull request. Contributions require a separate written contributor license agreement or copyright assignment accepted by Gabe Winstead before they can be accepted. See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for more detail.
 
 ## License
 
-MIT. See [`LICENSE`](./LICENSE).
+This project is **proprietary source-available software**, not open-source software. Personal, non-commercial use is allowed under the terms of the [`Proprietary Source-Available License`](./LICENSE). Commercial use, resale, redistribution, sublicensing, and claiming authorship are prohibited without prior written permission from Gabe Winstead. Approved public use must credit Gabe Winstead as the original creator.
+
+See the complete [`LICENSE`](./LICENSE). This custom license should be reviewed by a qualified attorney before distribution.
 
 <div align="center">
   <br />
