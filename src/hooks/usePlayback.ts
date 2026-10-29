@@ -4,6 +4,9 @@ import type { LyricLine } from '../utils/lrcParser'
 /** A gap bigger than this (seconds) between the clock and a new sample is treated as a seek or a new track. */
 const SEEK_THRESHOLD = 1
 
+/** Consecutive samples that must all be far behind the clock before the clock moves backwards. */
+const CONFIRM_SAMPLES = 2
+
 /**
  * A playback clock that keeps running between position samples.
  *
@@ -13,23 +16,36 @@ const SEEK_THRESHOLD = 1
  * playing, so `getPosition()` is accurate at any instant and never lags.
  *
  * When a new sample arrives:
- * - paused, play/pause change, or a gap over SEEK_THRESHOLD: snap to the sample
+ * - new track (resetKey changed), play/pause change, or paused: snap to the sample
  * - sample ahead of the clock: jump forward to it (the clock was late)
  * - sample slightly behind the clock: ignore it. Samples are quantised and can
  *   be stale, and moving the clock backwards would make lyrics flicker.
+ * - sample far behind the clock: only believe it once CONFIRM_SAMPLES in a row
+ *   agree. A real seek stays behind; a single stale reading does not.
  */
-export function usePlaybackClock(position: number, playing: boolean): () => number {
-  const clock = useRef({ base: position, at: performance.now(), playing })
+export function usePlaybackClock(position: number, playing: boolean, resetKey = ''): () => number {
+  const clock = useRef({ base: position, at: performance.now(), playing, key: resetKey })
+  const behindSamples = useRef(0)
 
   useLayoutEffect(() => {
     const now = performance.now()
     const c = clock.current
     const predicted = c.playing ? c.base + (now - c.at) / 1000 : c.base
     const error = position - predicted
-    if (playing !== c.playing || !playing || error > 0 || Math.abs(error) > SEEK_THRESHOLD) {
-      clock.current = { base: position, at: now, playing }
+    const anchor = () => {
+      clock.current = { base: position, at: now, playing, key: resetKey }
+      behindSamples.current = 0
     }
-  }, [position, playing])
+
+    if (resetKey !== c.key || playing !== c.playing || !playing || error > 0) {
+      anchor()
+    } else if (error < -SEEK_THRESHOLD) {
+      behindSamples.current += 1
+      if (behindSamples.current >= CONFIRM_SAMPLES) anchor()
+    } else {
+      behindSamples.current = 0
+    }
+  }, [position, playing, resetKey])
 
   return useCallback(() => {
     const c = clock.current

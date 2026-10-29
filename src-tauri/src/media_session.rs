@@ -29,6 +29,9 @@ fn thumbnail_data_url(
 static FRONTEND_READY: AtomicBool = AtomicBool::new(false);
 
 #[cfg(target_os = "windows")]
+const POLL_INTERVAL: Duration = Duration::from_millis(250);
+
+#[cfg(target_os = "windows")]
 fn spotify_session(
     manager: &windows::Media::Control::GlobalSystemMediaTransportControlsSessionManager,
 ) -> Option<windows::Media::Control::GlobalSystemMediaTransportControlsSession> {
@@ -39,6 +42,39 @@ fn spotify_session(
         let source = session.SourceAppUserModelId().ok()?.to_string();
         source.to_lowercase().contains("spotify").then_some(session)
     })
+}
+
+/// Windows reports the timeline position as it was at `LastUpdatedTime` and never advances it on its
+/// own, so a playing session has to be extrapolated forward. Without this the value goes stale between
+/// Spotify's updates, and two readers that see different snapshots disagree by seconds.
+#[cfg(target_os = "windows")]
+fn timeline_snapshot(
+    timeline: &windows::Media::Control::GlobalSystemMediaTransportControlsSessionTimelineProperties,
+    playing: bool,
+) -> Option<(f64, f64)> {
+    const TICKS_PER_SECOND: f64 = 10_000_000.0;
+    // Windows DateTime ticks count from 1601-01-01, Unix time from 1970-01-01
+    const UNIX_EPOCH_IN_WINDOWS_TICKS: i64 = 116_444_736_000_000_000;
+
+    let mut position = timeline.Position().ok()?.Duration as f64 / TICKS_PER_SECOND;
+    let duration = timeline.EndTime().ok()?.Duration as f64 / TICKS_PER_SECOND;
+    if playing {
+        if let Ok(updated) = timeline.LastUpdatedTime() {
+            if updated.UniversalTime > 0 {
+                if let Ok(since_unix) = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
+                    let now = (since_unix.as_nanos() / 100) as i64 + UNIX_EPOCH_IN_WINDOWS_TICKS;
+                    let elapsed = (now - updated.UniversalTime) as f64 / TICKS_PER_SECOND;
+                    if (0.0..=4.0 * 3600.0).contains(&elapsed) {
+                        position += elapsed;
+                    }
+                }
+            }
+        }
+        if duration > 0.0 {
+            position = position.min(duration);
+        }
+    }
+    Some((position, duration))
 }
 
 #[tauri::command]
@@ -77,9 +113,9 @@ pub async fn get_current_track() -> Result<Track, String> {
             ..Default::default()
         };
         if let Ok(timeline) = session.GetTimelineProperties() {
-            if let (Ok(position), Ok(end)) = (timeline.Position(), timeline.EndTime()) {
-                track.position = position.Duration as f64 / 10_000_000.0;
-                track.duration = end.Duration as f64 / 10_000_000.0;
+            if let Some((position, duration)) = timeline_snapshot(&timeline, playing) {
+                track.position = position;
+                track.duration = duration;
             }
         }
         return Ok(track);
@@ -182,11 +218,9 @@ pub fn start(app: AppHandle) {
                     let title = properties.Title().unwrap_or_default().to_string();
                     let artist = properties.Artist().unwrap_or_default().to_string();
                     if title.trim().is_empty() {
-                        std::thread::sleep(Duration::from_millis(500));
+                        std::thread::sleep(POLL_INTERVAL);
                         continue;
                     }
-                    let album = properties.AlbumTitle().unwrap_or_default().to_string();
-                    let album_art_url = thumbnail_data_url(&properties);
                     let playback = session.GetPlaybackInfo().ok();
                     let playing = playback
                         .as_ref()
@@ -195,6 +229,9 @@ pub fn start(app: AppHandle) {
                     let key = format!("{title}::{artist}");
                     if key != last_key && FRONTEND_READY.load(Ordering::Acquire) {
                         last_key = key;
+                        // The thumbnail is large, so only read it when the track changes
+                        let album = properties.AlbumTitle().unwrap_or_default().to_string();
+                        let album_art_url = thumbnail_data_url(&properties);
                         let _ = app.emit(
                             "track-changed",
                             Track {
@@ -209,12 +246,12 @@ pub fn start(app: AppHandle) {
                     }
 
                     if let Ok(timeline) = session.GetTimelineProperties() {
-                        if let (Ok(position), Ok(end)) = (timeline.Position(), timeline.EndTime()) {
+                        if let Some((position, duration)) = timeline_snapshot(&timeline, playing) {
                             let _ = app.emit(
                                 "position-updated",
                                 serde_json::json!({
-                                    "position": position.Duration as f64 / 10_000_000.0,
-                                    "duration": end.Duration as f64 / 10_000_000.0,
+                                    "position": position,
+                                    "duration": duration,
                                     "playing": playing
                                 }),
                             );
@@ -222,7 +259,7 @@ pub fn start(app: AppHandle) {
                     }
                 }
             }
-            std::thread::sleep(Duration::from_millis(500));
+            std::thread::sleep(POLL_INTERVAL);
         }
     });
 }

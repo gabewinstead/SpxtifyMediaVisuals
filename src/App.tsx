@@ -135,7 +135,7 @@ export default function App() {
 
   // One live clock drives everything time-based:
   // lyrics read it directly (instant, never behind), the progress bar eases toward it.
-  const getPosition = usePlaybackClock(track.position, track.playing)
+  const getPosition = usePlaybackClock(track.position, track.playing, `${track.artist}::${track.title}`)
   const activeIndex = useActiveLyricIndex(lines, getPosition)
   const hasTrack = Boolean(track.title.trim())
 
