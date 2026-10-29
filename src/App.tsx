@@ -279,12 +279,13 @@ export default function App() {
   } as React.CSSProperties}>
     {(mode === 'lyrics' || mode === 'combined') && <AlbumArtBackground image={track.albumArtUrl || artwork} accent={accent} />}
 
-    {/* Top bar — simple, full-width, no glass pill */}
-    <div className="top-bar" data-tauri-drag-region>
+    <div className="top-bar" onMouseDown={(event) => {
+      if (event.target === event.currentTarget) void appWindow.startDragging()
+    }}>
       <div className="window-actions">
-        <button onClick={(e) => { e.stopPropagation(); void appWindow.minimize() }} aria-label="Minimize" title="Minimize">−</button>
-        <button onClick={(e) => { e.stopPropagation(); void toggleMaximize() }} aria-label="Maximize" title="Maximize">□</button>
-        <button onClick={(e) => { e.stopPropagation(); void appWindow.close() }} aria-label="Close" title="Close">×</button>
+        <button onClick={() => void appWindow.minimize()} aria-label="Minimize" title="Minimize">−</button>
+        <button onClick={() => void toggleMaximize()} aria-label="Maximize" title="Maximize">□</button>
+        <button onClick={() => void appWindow.close()} aria-label="Close" title="Close">×</button>
       </div>
     </div>
 
