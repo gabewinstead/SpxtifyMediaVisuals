@@ -11,6 +11,11 @@ import { parseLrc, type LyricLine } from './utils/lrcParser'
 import { extractDominantColor } from './utils/colorExtract'
 import { fetchArtwork } from './utils/artwork'
 import { useActiveLyricIndex, usePlaybackClock, useSmoothedPosition } from './hooks/usePlayback'
+import { CustomCanvas } from './components/CustomCanvas'
+import { LayoutEditor } from './components/LayoutEditor'
+import { ThemeStudio } from './components/ThemeStudio'
+import { loadCustomLayouts, makeWidget, saveCustomLayouts, starterLayout, type CustomLayout, type WidgetType } from './utils/customLayouts'
+import { buildCustomTheme, loadCustomThemes, newCustomTheme, saveCustomThemes, type CustomTheme } from './utils/themes'
 
 type ViewMode = 'lyrics' | 'album' | 'combined'
 type Track = { title: string; artist: string; album?: string; albumArtUrl?: string; duration: number; position: number; playing: boolean }
@@ -125,13 +130,19 @@ export default function App() {
   const [artwork, setArtwork] = useState<string>()
   const [accent, setAccent] = useState(defaultTheme.accentColor)
   const [theme, setTheme] = useState<Theme>(defaultTheme)
-  const [layoutStyle, setLayoutStyle] = useState<LayoutId>('center')
+  const [layoutStyle, setLayoutStyle] = useState<string>('center')
   const [mode, setMode] = useState<ViewMode>('lyrics')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const windowOpacity = 1
   const [alwaysOnTop, setAlwaysOnTop] = useState(true)
   const [lyricsLoading, setLyricsLoading] = useState(false)
   const [updateStatus, setUpdateStatus] = useState('')
+  const [customThemes, setCustomThemes] = useState<CustomTheme[]>(() => loadCustomThemes())
+  const [themeDraft, setThemeDraft] = useState<CustomTheme>()
+  const [editingTheme, setEditingTheme] = useState(false)
+  const [customLayouts, setCustomLayouts] = useState<CustomLayout[]>(() => loadCustomLayouts())
+  const [layoutDraft, setLayoutDraft] = useState<CustomLayout>()
+  const [editingLayout, setEditingLayout] = useState(false)
 
   // One live clock drives everything time-based:
   // lyrics read it directly (instant, never behind), the progress bar eases toward it.
@@ -315,6 +326,7 @@ export default function App() {
   // Poll for theme changes
   useEffect(() => {
     const timer = window.setInterval(() => {
+      if (theme.id.startsWith('custom-')) return
       invoke<Theme>('get_theme').then((value) => {
         const next = { ...value, layout: normalizeLayout(value.layout) }
         setTheme((current) => JSON.stringify(current) === JSON.stringify(next) ? current : next)
@@ -322,15 +334,18 @@ export default function App() {
       }).catch(() => undefined)
     }, 2000)
     return () => window.clearInterval(timer)
-  }, [])
+  }, [theme.id])
 
   const changeMode = (nextMode: ViewMode) => {
     setMode(nextMode)
     invoke('save_view_mode', { mode: nextMode }).catch(() => undefined)
   }
   const selectTheme = (id: string) => {
-    if (id === 'custom') {
-      setTheme((current) => ({ ...current, id: 'custom', name: 'Custom' }))
+    const custom = customThemes.find((item) => item.id === id)
+    if (custom) {
+      setThemeDraft(custom)
+      setTheme(buildCustomTheme(custom, layoutStyle))
+      setAccent(custom.albumAccent ? accent : buildCustomTheme(custom, layoutStyle).accentColor)
       return
     }
     const extraPreset = extraThemePresets[id]
@@ -348,16 +363,18 @@ export default function App() {
       setLayoutStyle(layout)
     }).catch(() => undefined)
   }
-  const updateCustomTheme = (field: keyof Theme, value: string) => {
-    setTheme((current) => ({ ...current, id: 'custom', name: 'Custom', [field]: value }))
-    if (field === 'accentColor') setAccent(value)
+  const openNewTheme = () => {
+    setThemeDraft(newCustomTheme(theme))
+    setEditingTheme(true)
   }
-  const saveCustomTheme = () => {
-    invoke('save_theme', { theme }).catch(() => undefined)
-  }
-  const selectLayout = (style: LayoutId) => {
+  const selectLayout = (style: string) => {
     setLayoutStyle(style) // apply immediately; the saved value catches up
-    if (!RUST_LAYOUTS.has(style)) {
+    const custom = customLayouts.find((layout) => layout.id === style)
+    if (custom) {
+      setTheme((current) => ({ ...current, layout: style }))
+      return
+    }
+    if (!RUST_LAYOUTS.has(style as LayoutId)) {
       const value = { ...theme, layout: style }
       setTheme(value)
       invoke('save_theme', { theme: value }).catch(() => undefined)
@@ -366,6 +383,26 @@ export default function App() {
     invoke<Theme>('save_layout', { style }).then((value) => {
       setTheme({ ...value, layout: normalizeLayout(value.layout) })
     }).catch(() => undefined)
+  }
+  const openLayoutEditor = (layout?: CustomLayout) => {
+    setLayoutDraft(layout ? { ...layout, widgets: layout.widgets.map((widget) => ({ ...widget })) } : starterLayout())
+    setEditingLayout(true)
+  }
+  const saveLayoutDraft = () => {
+    if (!layoutDraft?.name.trim()) return
+    const next = [...customLayouts.filter((item) => item.id !== layoutDraft.id), { ...layoutDraft, name: layoutDraft.name.trim() }]
+    setCustomLayouts(next)
+    saveCustomLayouts(next)
+    setLayoutStyle(layoutDraft.id)
+    setEditingLayout(false)
+  }
+  const deleteTheme = () => {
+    if (!themeDraft) return
+    const next = customThemes.filter((item) => item.id !== themeDraft.id)
+    setCustomThemes(next)
+    saveCustomThemes(next)
+    setEditingTheme(false)
+    selectTheme('spotify-dark')
   }
   const toggleMaximize = async () => {
     if (await appWindow.isMaximized()) await appWindow.unmaximize()
@@ -396,7 +433,17 @@ export default function App() {
 
     <section className="overlay">
       <div className="view-content">
-        {mode === 'lyrics' || mode === 'combined'
+        {editingLayout && layoutDraft
+          ? <CustomCanvas widgets={layoutDraft.widgets} editing onChange={(widgets) => setLayoutDraft({ ...layoutDraft, widgets })} data={{
+              hasTrack, title: track.title, artist: track.artist, playing: track.playing, duration: track.duration,
+              cover: track.albumArtUrl || artwork, lines, activeIndex, lyricsLoading, getPosition, accent,
+            }} />
+          : customLayouts.some((layout) => layout.id === layoutStyle)
+          ? <CustomCanvas widgets={customLayouts.find((layout) => layout.id === layoutStyle)?.widgets ?? []} data={{
+              hasTrack, title: track.title, artist: track.artist, playing: track.playing, duration: track.duration,
+              cover: track.albumArtUrl || artwork, lines, activeIndex, lyricsLoading, getPosition, accent,
+            }} />
+          : mode === 'lyrics' || mode === 'combined'
           ? hasTrack
             ? <div className={`lyrics-content ${mode === 'combined' ? 'combined-content' : ''} ${track.playing ? 'is-playing' : 'is-paused'}`}>
                 {mode === 'combined' && <div className="combined-track-card">
@@ -416,6 +463,21 @@ export default function App() {
               {track.albumArtUrl || artwork ? <img className="cover-art" src={track.albumArtUrl || artwork} alt="" /> : <div className="cover-placeholder" />}
               <div className="track-info"><h1>{hasTrack ? track.title : 'Waiting for playback'}</h1><p>{hasTrack ? track.artist : ''}</p></div>
             </div>}
+      {editingTheme && themeDraft && <ThemeStudio draft={themeDraft} isNew={!customThemes.some((item) => item.id === themeDraft.id)}
+        onChange={(draft) => { setThemeDraft(draft); setTheme(buildCustomTheme(draft, layoutStyle)); setAccent(draft.albumAccent ? accent : buildCustomTheme(draft, layoutStyle).accentColor) }}
+        onSave={() => {
+          const next = [...customThemes.filter((item) => item.id !== themeDraft.id), themeDraft]
+          setCustomThemes(next); saveCustomThemes(next); setThemeDraft(themeDraft)
+          const built = buildCustomTheme(themeDraft, layoutStyle)
+          setTheme(built); if (!themeDraft.albumAccent) setAccent(built.accentColor)
+          setEditingTheme(false)
+        }}
+        onCancel={() => setEditingTheme(false)} onDelete={deleteTheme} />}
+      {editingLayout && layoutDraft && <LayoutEditor name={layoutDraft.name}
+        onName={(name) => setLayoutDraft({ ...layoutDraft, name })}
+        onAdd={(type: WidgetType) => setLayoutDraft({ ...layoutDraft, widgets: [...layoutDraft.widgets, makeWidget(type, layoutDraft.widgets)] })}
+        onReset={() => { const starter = starterLayout(); setLayoutDraft({ ...starter, id: layoutDraft.id, name: layoutDraft.name }) }} onCancel={() => setEditingLayout(false)}
+        onSave={saveLayoutDraft} />}
       </div>
 
       {/* Bottom bar — simple, full-width, no glass pill */}
@@ -451,22 +513,19 @@ export default function App() {
                 <option value="aurora">Aurora</option>
                 <option value="rose">Rose</option>
                 <option value="ghost">Ghost</option>
-                <option value="custom">Custom...</option>
+                {customThemes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
               </select>
             </label>
-            {theme.id === 'custom' && <div className="custom-theme-editor">
-              <label>Accent <input type="color" value={theme.accentColor} onChange={(event) => updateCustomTheme('accentColor', event.target.value)} /></label>
-              <label>Background <input type="color" value={theme.backgroundColor} onChange={(event) => updateCustomTheme('backgroundColor', event.target.value)} /></label>
-              <label>Text <input type="color" value={theme.textColor} onChange={(event) => updateCustomTheme('textColor', event.target.value)} /></label>
-              <label>Blur <input type="range" min="0" max="80" value={parseInt(theme.blurAmount, 10)} onChange={(event) => updateCustomTheme('blurAmount', `${event.target.value}px`)} /></label>
-              <label>Lyrics size <input type="range" min="20" max="64" value={parseInt(theme.lyricSize, 10)} onChange={(event) => updateCustomTheme('lyricSize', `${event.target.value}px`)} /></label>
-              <button onClick={saveCustomTheme}>Save custom theme</button>
-            </div>}
+            <button onClick={openNewTheme}>＋ New theme</button>
+            {themeDraft && customThemes.some((item) => item.id === themeDraft.id) && <button onClick={() => setEditingTheme(true)}>Edit theme</button>}
             <label className="settings-field">Layout
               <select value={layoutStyle} onChange={(event) => selectLayout(event.target.value as LayoutId)}>
                 {LAYOUTS.map((layout) => <option key={layout.id} value={layout.id}>{layout.label}</option>)}
+                {customLayouts.map((layout) => <option key={layout.id} value={layout.id}>{layout.name}</option>)}
               </select>
             </label>
+            <button onClick={() => openLayoutEditor()}>＋ New layout</button>
+            {customLayouts.some((layout) => layout.id === layoutStyle) && <button onClick={() => openLayoutEditor(customLayouts.find((layout) => layout.id === layoutStyle))}>Edit layout</button>}
             <label><input type="checkbox" checked={alwaysOnTop} onChange={(event) => { setAlwaysOnTop(event.target.checked); void appWindow.setAlwaysOnTop(event.target.checked) }} /> Always on top</label>
             <button onClick={() => void installUpdate(true)}>Check for updates</button>
             {updateStatus && <span className="update-status" role="status">{updateStatus}</span>}
