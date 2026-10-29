@@ -2,7 +2,7 @@
 
 A frameless, always-on-top Spotify lyrics and now-playing overlay for Windows and Linux.
 
-![Screenshot placeholder](docs/screenshot-placeholder.png)
+![](https://cdn.discordapp.com/attachments/1207855250657124393/1565186745203560508/preview.png?ex=6ae3fd3f&is=6ae2abbf&hm=9a5353a1d7e6747030cd724cb2b8a7c30e5b36db78ac633a971b2cbe6e5554af&)
 
 ## Features
 
