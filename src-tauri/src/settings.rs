@@ -20,6 +20,10 @@ pub struct Theme {
     pub panel_opacity: f32,
     pub blur_amount: String,
     pub border_radius: String,
+    #[serde(default = "default_glow")]
+    pub glow: String,
+    #[serde(default = "default_progress_glow")]
+    pub progress_glow: String,
     #[serde(default = "default_layout")]
     pub layout: String,
 }
@@ -27,6 +31,8 @@ pub struct Theme {
 fn default_theme_id() -> String { "spotify-dark".to_string() }
 fn default_theme_name() -> String { "Spotify Dark".to_string() }
 fn default_layout() -> String { "center".to_string() }
+fn default_glow() -> String { "0 0 20px rgba(29, 185, 84, 0.3)".to_string() }
+fn default_progress_glow() -> String { "none".to_string() }
 
 impl Default for Theme {
     fn default() -> Self {
@@ -46,6 +52,8 @@ impl Default for Theme {
             blur_amount: "42px".to_string(),
             border_radius: "12px".to_string(),
             layout: default_layout(),
+            glow: default_glow(),
+            progress_glow: default_progress_glow(),
         }
     }
 }
@@ -80,13 +88,13 @@ pub fn save_theme(theme: Theme) -> Result<(), String> {
 #[tauri::command]
 pub fn save_theme_preset(id: String) -> Result<Theme, String> {
     let mut theme = Theme::default();
-    let (name, background, secondary, text, muted, accent, layout) = match id.as_str() {
-        "midnight" => ("Midnight", "#0a0a1a", "#14142b", "#F5F3FF", "#AAA7C7", "#6366F1", "cinematic"),
-        "sunset" => ("Sunset", "#1a0a0a", "#2b1414", "#FFF7ED", "#FDBA74", "#F97316", "center"),
-        "ocean" => ("Ocean", "#0a1a1a", "#102727", "#ECFEFF", "#A5F3FC", "#06B6D4", "split"),
-        "light" => ("Light Mode", "#f5f5f5", "#FFFFFF", "#1a1a1a", "#5B5B5B", "#1DB954", "minimal"),
-        "neon" => ("Neon", "#0a0a0a", "#171717", "#FFFFFF", "#A3A3A3", "#FF00FF", "left-aligned"),
-        _ => ("Spotify Dark", "#121212", "#181818", "#FFFFFF", "#B3B3B3", "#1DB954", "center"),
+    let (name, background, secondary, text, muted, accent, layout, glow, progress_glow) = match id.as_str() {
+        "midnight" => ("Midnight", "linear-gradient(180deg, #0a0a1a, #1a1035)", "#14142b", "#F5F3FF", "#AAA7C7", "#6366F1", "cinematic", "0 0 20px rgba(99, 102, 241, 0.4)", "none"),
+        "sunset" => ("Sunset", "linear-gradient(180deg, #1a0a0a, #2d1210)", "#2b1414", "#FFF7ED", "#FDBA74", "#F97316", "center", "0 0 20px rgba(249, 115, 22, 0.3)", "none"),
+        "ocean" => ("Ocean", "linear-gradient(180deg, #0a1a1a, #0a2535)", "#102727", "#ECFEFF", "#A5F3FC", "#06B6D4", "split", "0 0 20px rgba(6, 182, 212, 0.3)", "none"),
+        "light" => ("Light Mode", "#f5f5f5", "#FFFFFF", "#1a1a1a", "#666666", "#1DB954", "minimal", "0 0 20px rgba(29, 185, 84, 0.2)", "none"),
+        "neon" => ("Neon", "#0a0a0a", "#171717", "#FFFFFF", "#444444", "#FF00FF", "left-aligned", "0 0 10px #ff00ff, 0 0 30px #ff00ff40", "0 0 8px #ff00ff"),
+        _ => ("Spotify Dark", "#121212", "#181818", "#FFFFFF", "#B3B3B3", "#1DB954", "center", "0 0 20px rgba(29, 185, 84, 0.3)", "none"),
     };
     theme.id = id;
     theme.name = name.to_string();
@@ -96,6 +104,8 @@ pub fn save_theme_preset(id: String) -> Result<Theme, String> {
     theme.muted_text_color = muted.to_string();
     theme.accent_color = accent.to_string();
     theme.layout = layout.to_string();
+    theme.glow = glow.to_string();
+    theme.progress_glow = progress_glow.to_string();
     save_theme(theme.clone())?;
     Ok(theme)
 }

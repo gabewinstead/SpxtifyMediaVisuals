@@ -19,6 +19,7 @@ type Theme = {
   accentColor: string; backgroundColor: string; secondaryBackground: string
   textColor: string; mutedTextColor: string; fontFamily: string; titleSize: string
   artistSize: string; lyricSize: string; panelOpacity: number; blurAmount: string; borderRadius: string
+  glow: string; progressGlow: string
 }
 
 const defaultTheme: Theme = {
@@ -26,6 +27,7 @@ const defaultTheme: Theme = {
   textColor: '#FFFFFF', mutedTextColor: '#B3B3B3', fontFamily: 'Inter, Arial, sans-serif',
   titleSize: '32px', artistSize: '18px', lyricSize: '42px', panelOpacity: 0.72,
   blurAmount: '42px', borderRadius: '12px',
+  glow: '0 0 20px rgba(29, 185, 84, 0.3)', progressGlow: 'none',
   id: 'spotify-dark', name: 'Spotify Dark', layout: 'center',
 }
 
@@ -40,7 +42,6 @@ function parseLyricsPayload(payload: LyricsPayload): LyricLine[] {
 }
 
 async function fetchLyricsDirect(artist: string, title: string): Promise<string> {
-  // Try LRCLIB
   try {
     const url = `https://lrclib.net/api/search?track_name=${encodeURIComponent(title)}&artist_name=${encodeURIComponent(artist)}`
     const resp = await fetch(url)
@@ -58,7 +59,6 @@ async function fetchLyricsDirect(artist: string, title: string): Promise<string>
   } catch (e) {
     console.error('LRCLIB fetch failed:', e)
   }
-  // Fallback: Qobuzify
   try {
     const url2 = `https://api.qobuzify.app/v2/track?name=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist)}`
     const resp2 = await fetch(url2)
@@ -87,7 +87,7 @@ export default function App() {
   const windowOpacity = 1
   const [alwaysOnTop, setAlwaysOnTop] = useState(true)
   const [lyricsLoading, setLyricsLoading] = useState(false)
-  const activeIndex = useMemo(() => activeLyricIndex(lines, track.position), [lines, track.position])
+  const activeIndex = useMemo(() => activeLyricIndex(lines, track.position + 0.3), [lines, track.position])
   const hasTrack = Boolean(track.title.trim())
 
   // Event listeners
@@ -151,7 +151,7 @@ export default function App() {
     }
   }, [])
 
-  // Poll for track refresh (position, playing state)
+  // Poll for track refresh
   useEffect(() => {
     let active = true
     const refreshTrack = () => {
@@ -170,7 +170,7 @@ export default function App() {
         .catch(() => undefined)
     }
     refreshTrack()
-    const timer = window.setInterval(refreshTrack, 1000)
+    const timer = window.setInterval(refreshTrack, 500)
     return () => {
       active = false
       window.clearInterval(timer)
@@ -191,22 +191,7 @@ export default function App() {
     setLines([])
 
     const doFetch = async () => {
-      let lyrics = ''
-      // Try Rust command first
-      try {
-        lyrics = await invoke<string>('fetch_lyrics', {
-          artist: track.artist,
-          track: track.title,
-          album: track.album ?? '',
-          duration: track.duration,
-        })
-      } catch (e) {
-        console.error('Rust fetch_lyrics failed:', e)
-      }
-      // If Rust returned nothing, fetch directly from webview
-      if (!lyrics || lyrics.trim().length === 0) {
-        lyrics = await fetchLyricsDirect(track.artist, track.title)
-      }
+      const lyrics = await fetchLyricsDirect(track.artist, track.title)
       if (!active) return
       setLines(parseLyricsPayload(lyrics))
       setLyricsLoading(false)
@@ -279,33 +264,32 @@ export default function App() {
       setLayoutStyle(value.layout)
     }).catch(() => undefined)
   }
-  const stopDrag = (event: React.MouseEvent) => {
-    event.preventDefault()
-    event.stopPropagation()
-  }
   const toggleMaximize = async () => {
     if (await appWindow.isMaximized()) await appWindow.unmaximize()
     else await appWindow.maximize()
   }
 
-  return <main className={`app-shell mode-${mode} layout-${layoutStyle}`} style={{
+  return <main className={`app-shell theme-${theme.id} mode-${mode} layout-${layoutStyle}`} style={{
     '--accent': accent, '--background': theme.backgroundColor, '--secondary': theme.secondaryBackground,
     '--text': theme.textColor, '--muted': theme.mutedTextColor, '--font': theme.fontFamily,
     '--title-size': theme.titleSize, '--artist-size': theme.artistSize, '--lyric-size': theme.lyricSize,
     '--panel-opacity': theme.panelOpacity, '--blur': theme.blurAmount, '--radius': theme.borderRadius,
+    '--glow': theme.glow, '--progress-glow': theme.progressGlow,
     opacity: windowOpacity,
   } as React.CSSProperties}>
     {(mode === 'lyrics' || mode === 'combined') && <AlbumArtBackground image={track.albumArtUrl || artwork} accent={accent} />}
-    <header className="top-bar" data-tauri-drag-region>
-      <div className="window-actions" data-tauri-drag-region="false">
-        <button className="pointer-events-auto" data-tauri-drag-region="false" onMouseDown={stopDrag} onClick={() => void appWindow.minimize()} aria-label="Minimize" title="Minimize">−</button>
-        <button className="pointer-events-auto" data-tauri-drag-region="false" onMouseDown={stopDrag} onClick={() => void toggleMaximize()} aria-label="Maximize" title="Maximize">□</button>
-        <button className="pointer-events-auto" data-tauri-drag-region="false" onMouseDown={stopDrag} onClick={() => void appWindow.close()} aria-label="Close" title="Close">×</button>
+
+    {/* Top bar — simple, full-width, no glass pill */}
+    <div className="top-bar" data-tauri-drag-region>
+      <div className="window-actions">
+        <button onClick={(e) => { e.stopPropagation(); void appWindow.minimize() }} aria-label="Minimize" title="Minimize">−</button>
+        <button onClick={(e) => { e.stopPropagation(); void toggleMaximize() }} aria-label="Maximize" title="Maximize">□</button>
+        <button onClick={(e) => { e.stopPropagation(); void appWindow.close() }} aria-label="Close" title="Close">×</button>
       </div>
-    </header>
+    </div>
+
     <section className="overlay">
       <div className="view-content">
-        {hasTrack && mode === 'lyrics' && <div className="track-header"><strong>{track.title}</strong><span>{track.artist}</span></div>}
         {mode === 'lyrics' || mode === 'combined'
           ? hasTrack
             ? <div className={`lyrics-content ${mode === 'combined' ? 'combined-content' : ''} ${track.playing ? 'is-playing' : 'is-paused'}`}>
@@ -327,7 +311,9 @@ export default function App() {
               <div className="track-info"><h1>{hasTrack ? track.title : 'Waiting for playback'}</h1><p>{hasTrack ? track.artist : ''}</p></div>
             </div>}
       </div>
-      <footer className="bottom-bar" data-tauri-drag-region="false">
+
+      {/* Bottom bar — simple, full-width, no glass pill */}
+      <footer className="bottom-bar">
         <ProgressBar position={track.position} duration={track.duration} accent={accent} />
         <div className="playback-row">
           <span>{formatTime(track.position)}</span>
