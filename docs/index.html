@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b100d" />
+    <meta name="description" content="Spotify Lyrics Overlay — synchronized lyrics, album art, and a beautiful always-on-top desktop companion." />
+    <title>Spotify Lyrics Overlay</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #0b100d;
+        --panel: #111a15;
+        --line: rgba(255,255,255,.1);
+        --muted: #9daaa1;
+        --green: #1ed760;
+        --white: #f5faf6;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background:
+          radial-gradient(circle at 78% 12%, rgba(30,215,96,.18), transparent 28rem),
+          radial-gradient(circle at 18% 0%, rgba(80,140,255,.09), transparent 24rem),
+          var(--ink);
+        color: var(--white);
+        font: 16px/1.6 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      a { color: inherit; }
+      .wrap { width: min(1120px, calc(100% - 40px)); margin: auto; }
+      nav { display: flex; justify-content: space-between; align-items: center; padding: 28px 0; }
+      .brand { display: flex; align-items: center; gap: 12px; font-weight: 750; letter-spacing: -.02em; }
+      .brand img { width: 36px; height: 36px; }
+      nav a { color: var(--muted); text-decoration: none; margin-left: 24px; font-size: 14px; }
+      nav a:hover { color: var(--white); }
+      .hero { display: grid; grid-template-columns: .9fr 1.1fr; gap: 72px; align-items: center; padding: 72px 0 96px; }
+      .eyebrow { color: var(--green); text-transform: uppercase; letter-spacing: .16em; font-size: 12px; font-weight: 800; }
+      h1 { font-size: clamp(44px, 7vw, 78px); line-height: .98; letter-spacing: -.065em; margin: 18px 0 24px; max-width: 700px; }
+      h2 { font-size: clamp(30px, 4vw, 48px); line-height: 1.05; letter-spacing: -.045em; margin: 0 0 16px; }
+      .lede { color: var(--muted); font-size: 19px; max-width: 540px; }
+      .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+      .button { border: 1px solid var(--line); border-radius: 999px; padding: 12px 20px; text-decoration: none; font-weight: 750; }
+      .button.primary { background: var(--green); border-color: var(--green); color: #07120a; }
+      .button:hover { transform: translateY(-1px); }
+      .showcase { position: relative; }
+      .showcase::before { content: ""; position: absolute; inset: 10% -8% -10%; background: var(--green); filter: blur(80px); opacity: .14; z-index: -1; }
+      .showcase img { display: block; width: 100%; border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 30px 80px rgba(0,0,0,.4); }
+      .section { padding: 82px 0; border-top: 1px solid var(--line); }
+      .section-intro { color: var(--muted); max-width: 600px; margin-bottom: 34px; }
+      .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+      .card { background: linear-gradient(145deg, rgba(255,255,255,.065), rgba(255,255,255,.025)); border: 1px solid var(--line); border-radius: 18px; padding: 24px; }
+      .card h3 { margin: 0 0 8px; font-size: 18px; }
+      .card p { color: var(--muted); margin: 0; }
+      .note { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 26px; }
+      code { color: var(--green); }
+      footer { color: var(--muted); border-top: 1px solid var(--line); padding: 28px 0 42px; font-size: 14px; }
+      @media (max-width: 820px) {
+        nav a { margin-left: 12px; }
+        .hero { grid-template-columns: 1fr; gap: 36px; padding-top: 42px; }
+        .grid { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <nav>
+        <a class="brand" href="./">
+          <img src="../src-tauri/icons/icon.png" alt="" />
+          <span>Spotify Lyrics Overlay</span>
+        </a>
+        <div>
+          <a href="https://github.com/gabewinstead/SpxtifyMediaVisuals/releases">Download</a>
+          <a href="https://github.com/gabewinstead/SpxtifyMediaVisuals">GitHub</a>
+        </div>
+      </nav>
+
+      <main>
+        <section class="hero">
+          <div>
+            <div class="eyebrow">Your music, made visible</div>
+            <h1>Lyrics that live where you do.</h1>
+            <p class="lede">A beautiful, always-on-top desktop companion for synchronized lyrics, album art, and the track already playing.</p>
+            <div class="actions">
+              <a class="button primary" href="https://github.com/gabewinstead/SpxtifyMediaVisuals/releases/latest">Download for Windows</a>
+              <a class="button" href="https://github.com/gabewinstead/SpxtifyMediaVisuals">View source</a>
+            </div>
+          </div>
+          <div class="showcase">
+            <img src="https://cdn.discordapp.com/attachments/1207855250657124393/1565186745203560508/preview.png?ex=6ae3fd3f&is=6ae2abbf&hm=9a5353a1d7e6747030cd724cb2b8a7c30e5b36db78ac633a971b2cbe6e5554af&" alt="Spotify Lyrics Overlay showing synchronized lyrics over album artwork" />
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="eyebrow">Why people keep it open</div>
+          <h2>Small footprint. Big atmosphere.</h2>
+          <p class="section-intro">Keep your music close without opening another full-size player. Choose the mood, the layout, and how much of the song you want to see.</p>
+          <div class="grid">
+            <article class="card"><h3>🎤 Synchronized lyrics</h3><p>Follow the song in real time with lyrics fetched from LRCLIB — no API key required.</p></article>
+            <article class="card"><h3>🎨 Album-art color</h3><p>Artwork brings its own accent color, blur, and atmosphere to the overlay.</p></article>
+            <article class="card"><h3>🖥️ Always on top</h3><p>Frameless, draggable, resizable, and ready to sit beside your work or over a game.</p></article>
+            <article class="card"><h3>▦ Three views</h3><p>Switch between focused lyrics, album cover, and a combined now-playing canvas.</p></article>
+            <article class="card"><h3>⚡ Quietly automatic</h3><p>Reads Windows SMTC or Linux MPRIS and updates playback as your music changes.</p></article>
+            <article class="card"><h3>↻ Automatic updates</h3><p>Signed releases check for updates and install them without making you hunt for a new build.</p></article>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="note">
+            <div class="eyebrow">Try it</div>
+            <h2>Make your desktop sound like you.</h2>
+            <p class="section-intro">Start with the latest release, then tune the colors, type, blur, opacity, and layout from Settings.</p>
+            <div class="actions">
+              <a class="button primary" href="https://github.com/gabewinstead/SpxtifyMediaVisuals/releases/latest">Get the latest release</a>
+              <a class="button" href="https://github.com/gabewinstead/SpxtifyMediaVisuals/issues">Send feedback</a>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        Spotify Lyrics Overlay is created by Gabe Winstead. Source-available, personal non-commercial use under the <a href="../LICENSE">project license</a>.
+      </footer>
+    </div>
+  </body>
+</html>

@@ -6,6 +6,7 @@
     <a href="https://github.com/gabewinstead/SpxtifyMediaVisuals/releases"><img src="https://img.shields.io/github/v/release/gabewinstead/SpxtifyMediaVisuals?style=flat-square&color=1ed760" alt="Latest release" /></a>
     <a href="https://github.com/gabewinstead/SpxtifyMediaVisuals/actions"><img src="https://img.shields.io/github/actions/workflow/status/gabewinstead/SpxtifyMediaVisuals/build.yml?style=flat-square&label=build" alt="Build status" /></a>
     <a href="./LICENSE"><img src="https://img.shields.io/badge/license-proprietary--source--available-111714?style=flat-square" alt="Proprietary source-available license" /></a>
+    <a href="https://gabewinstead.github.io/SpxtifyMediaVisuals/"><img src="https://img.shields.io/badge/showcase-live-1ed760?style=flat-square" alt="Project showcase" /></a>
   </p>
 </div>
 
