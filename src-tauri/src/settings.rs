@@ -92,8 +92,8 @@ pub fn save_theme_preset(id: String) -> Result<Theme, String> {
         "midnight" => ("Midnight", "linear-gradient(180deg, #0a0a1a, #1a1035)", "#14142b", "#F5F3FF", "#AAA7C7", "#6366F1", "cinematic", "0 0 20px rgba(99, 102, 241, 0.4)", "none"),
         "sunset" => ("Sunset", "linear-gradient(180deg, #1a0a0a, #2d1210)", "#2b1414", "#FFF7ED", "#FDBA74", "#F97316", "center", "0 0 20px rgba(249, 115, 22, 0.3)", "none"),
         "ocean" => ("Ocean", "linear-gradient(180deg, #0a1a1a, #0a2535)", "#102727", "#ECFEFF", "#A5F3FC", "#06B6D4", "split", "0 0 20px rgba(6, 182, 212, 0.3)", "none"),
-        "light" => ("Light Mode", "#f5f5f5", "#FFFFFF", "#1a1a1a", "#666666", "#1DB954", "minimal", "0 0 20px rgba(29, 185, 84, 0.2)", "none"),
-        "neon" => ("Neon", "#0a0a0a", "#171717", "#FFFFFF", "#444444", "#FF00FF", "left-aligned", "0 0 10px #ff00ff, 0 0 30px #ff00ff40", "0 0 8px #ff00ff"),
+        "light" => ("Light Mode", "#f5f5f5", "#FFFFFF", "#1a1a1a", "#666666", "#1DB954", "center", "0 0 20px rgba(29, 185, 84, 0.2)", "none"),
+        "neon" => ("Neon", "#0a0a0a", "#171717", "#FFFFFF", "#444444", "#FF00FF", "full-bleed", "0 0 10px #ff00ff, 0 0 30px #ff00ff40", "0 0 8px #ff00ff"),
         _ => ("Spotify Dark", "#121212", "#181818", "#FFFFFF", "#B3B3B3", "#1DB954", "center", "0 0 20px rgba(29, 185, 84, 0.3)", "none"),
     };
     theme.id = id;
@@ -112,7 +112,7 @@ pub fn save_theme_preset(id: String) -> Result<Theme, String> {
 
 #[tauri::command]
 pub fn save_layout(style: String) -> Result<Theme, String> {
-    if !["center", "left-aligned", "split", "minimal", "cinematic"].contains(&style.as_str()) {
+    if !["center", "full-bleed", "split", "cinematic"].contains(&style.as_str()) {
         return Err("Invalid layout style".to_string());
     }
     let mut theme = get_theme()?;

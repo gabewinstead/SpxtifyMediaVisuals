@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { getCurrentWindow } from '@tauri-apps/api/window'
@@ -7,9 +7,10 @@ import { relaunch } from '@tauri-apps/plugin-process'
 import { AlbumArtBackground } from './components/AlbumArtBackground'
 import { LyricsDisplay } from './components/LyricsDisplay'
 import { ProgressBar } from './components/ProgressBar'
-import { activeLyricIndex, parseLrc, type LyricLine } from './utils/lrcParser'
+import { parseLrc, type LyricLine } from './utils/lrcParser'
 import { extractDominantColor } from './utils/colorExtract'
 import { fetchArtwork } from './utils/artwork'
+import { useActiveLyricIndex, usePlaybackClock, useSmoothedPosition } from './hooks/usePlayback'
 
 type ViewMode = 'lyrics' | 'album' | 'combined'
 type Track = { title: string; artist: string; album?: string; albumArtUrl?: string; duration: number; position: number; playing: boolean }
@@ -22,6 +23,29 @@ type Theme = {
   textColor: string; mutedTextColor: string; fontFamily: string; titleSize: string
   artistSize: string; lyricSize: string; panelOpacity: number; blurAmount: string; borderRadius: string
   glow: string; progressGlow: string
+}
+
+const LAYOUTS = [
+  { id: 'center', label: 'Centered' },
+  { id: 'left-aligned', label: 'Left Aligned' },
+  { id: 'minimal', label: 'Minimal' },
+  { id: 'cinematic', label: 'Cinematic' },
+] as const
+type LayoutId = typeof LAYOUTS[number]['id']
+
+/** Layouts the Rust `save_layout` command already accepts. The rest are saved through `save_theme`. */
+const RUST_LAYOUTS = new Set<LayoutId>(['center', 'cinematic'])
+
+/** Maps anything stored on disk (including the removed "split" and "full-bleed") onto a layout that exists. */
+function normalizeLayout(value?: string): LayoutId {
+  return LAYOUTS.find((layout) => layout.id === value)?.id ?? 'center'
+}
+
+const extraThemePresets: Record<string, Partial<Theme>> = {
+  ember: { name: 'Ember', backgroundColor: '#1a0a0a', secondaryBackground: '#2a1212', textColor: '#FFF5F0', mutedTextColor: '#AA8878', accentColor: '#F97316', glow: '0 0 40px rgba(249, 115, 22, 0.3)' },
+  aurora: { name: 'Aurora', backgroundColor: '#0a1a0f', secondaryBackground: '#0f2518', textColor: '#F0FFF4', mutedTextColor: '#7BC98B', accentColor: '#34D399', glow: '0 0 40px rgba(52, 211, 153, 0.3)' },
+  rose: { name: 'Rose', backgroundColor: '#1a0a12', secondaryBackground: '#2a1220', textColor: '#FFF0F5', mutedTextColor: '#C97BA0', accentColor: '#FB7185', glow: '0 0 40px rgba(251, 113, 133, 0.3)' },
+  ghost: { name: 'Ghost', backgroundColor: '#000000', secondaryBackground: '#0a0a0a', textColor: '#FFFFFF', mutedTextColor: '#555555', accentColor: '#FFFFFF', glow: '0 0 20px rgba(255, 255, 255, 0.1)' },
 }
 
 const defaultTheme: Theme = {
@@ -75,6 +99,20 @@ async function fetchLyricsDirect(artist: string, title: string): Promise<string>
   return ''
 }
 
+/** Applies a patch to the track, returning the same object when nothing changed so polling doesn't cause re-renders. */
+function patchTrack(previous: Track, patch: Partial<Track>): Track {
+  const next: Track = { ...previous }
+  let changed = false
+  for (const key of Object.keys(patch) as Array<keyof Track>) {
+    const value = patch[key]
+    if (value !== undefined && value !== previous[key]) {
+      Object.assign(next, { [key]: value })
+      changed = true
+    }
+  }
+  return changed ? next : previous
+}
+
 export default function App() {
   const appWindow = getCurrentWindow()
   const [track, setTrack] = useState<Track>({ title: '', artist: '', duration: 0, position: 0, playing: false })
@@ -82,15 +120,18 @@ export default function App() {
   const [artwork, setArtwork] = useState<string>()
   const [accent, setAccent] = useState(defaultTheme.accentColor)
   const [theme, setTheme] = useState<Theme>(defaultTheme)
-  const [layoutStyle, setLayoutStyle] = useState('center')
+  const [layoutStyle, setLayoutStyle] = useState<LayoutId>('center')
   const [mode, setMode] = useState<ViewMode>('lyrics')
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const karaoke = true
   const windowOpacity = 1
   const [alwaysOnTop, setAlwaysOnTop] = useState(true)
   const [lyricsLoading, setLyricsLoading] = useState(false)
   const [updateStatus, setUpdateStatus] = useState('')
-  const activeIndex = useMemo(() => activeLyricIndex(lines, track.position + 0.3), [lines, track.position])
+
+  // One live clock drives everything time-based:
+  // lyrics read it directly (instant, never behind), the progress bar eases toward it.
+  const getPosition = usePlaybackClock(track.position, track.playing)
+  const activeIndex = useActiveLyricIndex(lines, getPosition)
   const hasTrack = Boolean(track.title.trim())
 
   const installUpdate = async (notifyWhenCurrent: boolean) => {
@@ -131,13 +172,8 @@ export default function App() {
         setLyricsLoading(true)
       }),
       listen<PositionPayload>('position-updated', (event) => {
-        const payload = event.payload
-        setTrack((current) => ({
-          ...current,
-          position: payload.position ?? current.position,
-          duration: payload.duration ?? current.duration,
-          playing: payload.playing ?? current.playing,
-        }))
+        const { position, duration, playing } = event.payload
+        setTrack((current) => patchTrack(current, { position, duration, playing }))
       }),
       listen<LyricsPayload>('lyrics-received', (event) => {
         setLines(parseLyricsPayload(event.payload))
@@ -173,26 +209,24 @@ export default function App() {
     }
   }, [])
 
-  // Poll for track refresh
+  // Poll for position every 250ms
   useEffect(() => {
     let active = true
     const refreshTrack = () => {
       invoke<Track>('get_current_track')
         .then((current) => {
-          if (active && current.title?.trim()) {
-            setTrack((previous) => ({
-              ...previous,
-              position: current.position,
-              duration: current.duration,
-              playing: current.playing,
-              albumArtUrl: current.albumArtUrl ?? previous.albumArtUrl,
-            }))
-          }
+          if (!active || !current.title?.trim()) return
+          setTrack((previous) => patchTrack(previous, {
+            position: current.position,
+            duration: current.duration,
+            playing: current.playing,
+            albumArtUrl: current.albumArtUrl,
+          }))
         })
         .catch(() => undefined)
     }
     refreshTrack()
-    const timer = window.setInterval(refreshTrack, 500)
+    const timer = window.setInterval(refreshTrack, 250)
     return () => {
       active = false
       window.clearInterval(timer)
@@ -201,7 +235,11 @@ export default function App() {
 
   // Load theme and view mode on mount
   useEffect(() => {
-    invoke<Theme>('get_theme').then((value) => { setTheme(value); setLayoutStyle(value.layout || 'center') }).catch(() => undefined)
+    invoke<Theme>('get_theme').then((value) => {
+      const layout = normalizeLayout(value.layout)
+      setTheme({ ...value, layout })
+      setLayoutStyle(layout)
+    }).catch(() => undefined)
     invoke<string>('get_view_mode').then((value) => setMode(value === 'album' || value === 'combined' ? value : 'lyrics')).catch(() => undefined)
   }, [])
 
@@ -251,8 +289,9 @@ export default function App() {
   useEffect(() => {
     const timer = window.setInterval(() => {
       invoke<Theme>('get_theme').then((value) => {
-        setTheme((current) => JSON.stringify(current) === JSON.stringify(value) ? current : value)
-        setLayoutStyle(value.layout || 'center')
+        const next = { ...value, layout: normalizeLayout(value.layout) }
+        setTheme((current) => JSON.stringify(current) === JSON.stringify(next) ? current : next)
+        setLayoutStyle(next.layout as LayoutId)
       }).catch(() => undefined)
     }, 2000)
     return () => window.clearInterval(timer)
@@ -267,10 +306,19 @@ export default function App() {
       setTheme((current) => ({ ...current, id: 'custom', name: 'Custom' }))
       return
     }
-    invoke<Theme>('save_theme_preset', { id }).then((value) => {
+    const extraPreset = extraThemePresets[id]
+    if (extraPreset) {
+      const value = { ...theme, ...extraPreset, id, layout: layoutStyle }
       setTheme(value)
       setAccent(value.accentColor)
-      setLayoutStyle(value.layout)
+      invoke('save_theme', { theme: value }).catch(() => undefined)
+      return
+    }
+    invoke<Theme>('save_theme_preset', { id }).then((value) => {
+      const layout = normalizeLayout(value.layout)
+      setTheme({ ...value, layout })
+      setAccent(value.accentColor)
+      setLayoutStyle(layout)
     }).catch(() => undefined)
   }
   const updateCustomTheme = (field: keyof Theme, value: string) => {
@@ -280,10 +328,16 @@ export default function App() {
   const saveCustomTheme = () => {
     invoke('save_theme', { theme }).catch(() => undefined)
   }
-  const selectLayout = (style: string) => {
-    invoke<Theme>('save_layout', { style }).then((value) => {
+  const selectLayout = (style: LayoutId) => {
+    setLayoutStyle(style) // apply immediately; the saved value catches up
+    if (!RUST_LAYOUTS.has(style)) {
+      const value = { ...theme, layout: style }
       setTheme(value)
-      setLayoutStyle(value.layout)
+      invoke('save_theme', { theme: value }).catch(() => undefined)
+      return
+    }
+    invoke<Theme>('save_layout', { style }).then((value) => {
+      setTheme({ ...value, layout: normalizeLayout(value.layout) })
     }).catch(() => undefined)
   }
   const toggleMaximize = async () => {
@@ -302,7 +356,9 @@ export default function App() {
     {(mode === 'lyrics' || mode === 'combined') && <AlbumArtBackground image={track.albumArtUrl || artwork} accent={accent} />}
 
     <div className="top-bar" onMouseDown={(event) => {
-      if (event.target === event.currentTarget) void appWindow.startDragging()
+      if (event.button !== 0) return
+      if ((event.target as HTMLElement).closest('.window-actions')) return
+      void appWindow.startDragging()
     }}>
       <div className="window-actions">
         <button onClick={() => void appWindow.minimize()} aria-label="Minimize" title="Minimize">−</button>
@@ -324,7 +380,7 @@ export default function App() {
                 {lyricsLoading
                   ? <p className="lyrics-status">Loading lyrics...</p>
                   : lines.length > 0
-                    ? <LyricsDisplay lines={lines} activeIndex={activeIndex} accent={accent} karaoke={karaoke} />
+                    ? <LyricsDisplay lines={lines} activeIndex={activeIndex} />
                     : <p className="lyrics-status">No lyrics available</p>}
                 {mode === 'combined' && <div className="combined-vignette" />}
               </div>
@@ -337,12 +393,12 @@ export default function App() {
 
       {/* Bottom bar — simple, full-width, no glass pill */}
       <footer className="bottom-bar">
-        <ProgressBar position={track.position} duration={track.duration} accent={accent} />
+        <PlaybackProgress getPosition={getPosition} duration={track.duration} accent={accent} />
         <div className="playback-row">
-          <span>{formatTime(track.position)}</span>
+          <ElapsedTime getPosition={getPosition} duration={track.duration} />
           <div className="playback-controls">
             <button aria-label="Previous track" onClick={() => invoke('media_previous')}>◀◀</button>
-            <button className="play-button" aria-label="Play or pause" onClick={() => invoke('media_play_pause')}>{track.playing ? 'Ⅱ' : '▶'}</button>
+            <button className={`play-button ${track.playing ? 'is-playing' : ''}`} aria-label="Play or pause" onClick={() => invoke('media_play_pause')}>{track.playing ? 'Ⅱ' : '▶'}</button>
             <button aria-label="Next track" onClick={() => invoke('media_next')}>▶▶</button>
           </div>
           <span>{formatTime(track.duration)}</span>
@@ -364,6 +420,10 @@ export default function App() {
                 <option value="ocean">Ocean</option>
                 <option value="light">Light Mode</option>
                 <option value="neon">Neon</option>
+                <option value="ember">Ember</option>
+                <option value="aurora">Aurora</option>
+                <option value="rose">Rose</option>
+                <option value="ghost">Ghost</option>
                 <option value="custom">Custom...</option>
               </select>
             </label>
@@ -376,12 +436,8 @@ export default function App() {
               <button onClick={saveCustomTheme}>Save custom theme</button>
             </div>}
             <label className="settings-field">Layout
-              <select value={layoutStyle} onChange={(event) => selectLayout(event.target.value)}>
-                <option value="center">Centered</option>
-                <option value="left-aligned">Left Aligned</option>
-                <option value="split">Split</option>
-                <option value="minimal">Minimal</option>
-                <option value="cinematic">Cinematic</option>
+              <select value={layoutStyle} onChange={(event) => selectLayout(event.target.value as LayoutId)}>
+                {LAYOUTS.map((layout) => <option key={layout.id} value={layout.id}>{layout.label}</option>)}
               </select>
             </label>
             <label><input type="checkbox" checked={alwaysOnTop} onChange={(event) => { setAlwaysOnTop(event.target.checked); void appWindow.setAlwaysOnTop(event.target.checked) }} /> Always on top</label>
@@ -400,9 +456,25 @@ function formatTime(seconds: number) {
   return `${Math.floor(seconds / 60)}:${Math.floor(seconds % 60).toString().padStart(2, '0')}`
 }
 
+/** Owns the 50ms smoothing state so only the progress bar re-renders, not the whole app. */
+function PlaybackProgress({ getPosition, duration, accent }: { getPosition: () => number; duration: number; accent: string }) {
+  const position = useSmoothedPosition(getPosition)
+  return <ProgressBar position={duration > 0 ? Math.min(position, duration) : position} duration={duration} accent={accent} />
+}
+
+/** Elapsed time from the live clock, updating its own state so the rest of the app stays still. */
+function ElapsedTime({ getPosition, duration }: { getPosition: () => number; duration: number }) {
+  const [seconds, setSeconds] = useState(() => Math.floor(getPosition()))
+  useEffect(() => {
+    const timer = window.setInterval(() => setSeconds(Math.floor(getPosition())), 200)
+    return () => window.clearInterval(timer)
+  }, [getPosition])
+  return <span>{formatTime(duration > 0 ? Math.min(seconds, duration) : seconds)}</span>
+}
+
 function IdleState({ accent }: { accent: string }) {
   return <div className="idle-state">
     <span className="idle-pulse" style={{ backgroundColor: accent, boxShadow: `0 0 24px ${accent}` }} />
     <span>Waiting for playback...</span>
   </div>
-}   
+}
