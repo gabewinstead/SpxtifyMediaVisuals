@@ -20,7 +20,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDgwOTdBNTlDRjJENTJDRkUKUldUK0xOWHluS1dYZ0h1aTYyN3hLNlZaaU4vOFJKWFhtNGJTNGRrL0NBOFhWRk80WlQzNG11ZFcK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEE5RTg2QTc5NUQ2QkExMUEKUldRYW9XdGRlV3JvcWR2RERpelZjb2RrOUtUaHlYVWNObmpJL3VHZHRxK2pQVjNEUVBETDBXbjIK",
       "endpoints": [
         "https://raw.githubusercontent.com/gabewinstead/SpxtifyMediaVisuals/main/latest.json"
       ]
