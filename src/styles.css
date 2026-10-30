@@ -387,11 +387,15 @@ button:focus:not(:focus-visible) { outline: none; }
 .custom-canvas { position: relative; flex: 1; min-height: 0; width: 100%; height: 100%; overflow: hidden; }
 .custom-canvas .widget { position: absolute; overflow: hidden; }
 .custom-canvas .widget-body { width: 100%; height: 100%; overflow: hidden; }
+.custom-canvas .widget-lyrics .widget-body { display: flex; min-height: 0; }
+.custom-canvas .widget-lyrics-content { width: 100%; height: 100%; min-height: 0; }
 .custom-canvas .widget-cover { width: 100%; height: 100%; object-fit: cover; border-radius: var(--radius); }
 .custom-canvas .widget-track h1 { margin: 0; font-size: var(--title-size); }
 .custom-canvas .widget-track p { margin: 5px 0; color: var(--muted); font-size: var(--artist-size); }
 .custom-canvas .widget-line { margin: 0; color: var(--text); font-size: var(--lyric-size); font-weight: 700; }
 .widget-clock { font-size: clamp(18px, 3vw, 36px); font-variant-numeric: tabular-nums; }
+.widget-status, .widget-date { margin: 0; color: var(--muted); font-size: var(--artist-size); }
+.custom-canvas:not(.is-editing) .widget-track { border: 0; background: transparent; box-shadow: none; }
 .custom-canvas.is-editing { outline: 1px dashed var(--accent); }
 .custom-canvas .widget.is-editing { overflow: visible; border: 1px dashed color-mix(in srgb, var(--accent) 70%, transparent); cursor: move; }
 .custom-canvas .widget.is-selected { border: 2px solid var(--accent); }

@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { LyricsDisplay } from './LyricsDisplay'
-import { Controls, ProgressRow } from './PlaybackWidgets'
 import type { LyricLine } from '../utils/lrcParser'
 import { MIN_WIDGET_SIZE, WIDGET_INFO, type Widget, type WidgetType } from '../utils/customLayouts'
 
@@ -120,12 +119,13 @@ function renderWidget(type: WidgetType, data: CanvasData, preview: boolean) {
       <h1>{data.hasTrack ? data.title : preview ? 'Song title' : 'Waiting for playback'}</h1>
       <p>{data.hasTrack ? data.artist : preview ? 'Artist name' : ''}</p>
     </div>
-    case 'progress': return <ProgressRow getPosition={data.getPosition} duration={data.duration} accent={data.accent} />
-    case 'controls': return <Controls playing={data.playing} />
     case 'line': return <p key={data.activeIndex} className="widget-line">
       {data.lines[data.activeIndex]?.text ?? (preview ? 'The current lyric line' : '')}
     </p>
     case 'clock': return <Clock />
+    case 'status': return <p className="widget-status">{data.playing ? 'Playing' : data.hasTrack ? 'Paused' : 'Waiting for playback'}</p>
+    case 'lyric-count': return <p className="widget-status">{data.lines.length} {data.lines.length === 1 ? 'line' : 'lines'}</p>
+    case 'date': return <time className="widget-date">{new Date().toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}</time>
     default: return null
   }
 }
@@ -137,7 +137,7 @@ function LyricsWidget({ data, preview }: { data: CanvasData; preview: boolean })
   if (!data.hasTrack) return <p className="lyrics-status">Waiting for playback...</p>
   if (data.lyricsLoading) return <p className="lyrics-status">Loading lyrics...</p>
   if (data.lines.length === 0) return <p className="lyrics-status">No lyrics available</p>
-  return <div className={`lyrics-content ${data.playing ? 'is-playing' : 'is-paused'}`}>
+  return <div className={`lyrics-content widget-lyrics-content ${data.playing ? 'is-playing' : 'is-paused'}`}>
     <LyricsDisplay lines={data.lines} activeIndex={data.activeIndex} />
   </div>
 }

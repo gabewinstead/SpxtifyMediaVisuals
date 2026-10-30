@@ -274,12 +274,14 @@ export default function App() {
   // Load theme and view mode on mount
   useEffect(() => {
     invoke<Theme>('get_theme').then((value) => {
-      const layout = normalizeLayout(value.layout)
+      const layout = customLayouts.some((item) => item.id === value.layout)
+        ? value.layout
+        : normalizeLayout(value.layout)
       setTheme({ ...value, layout })
       setLayoutStyle(layout)
     }).catch(() => undefined)
     invoke<string>('get_view_mode').then((value) => setMode(value === 'album' || value === 'combined' ? value : 'lyrics')).catch(() => undefined)
-  }, [])
+  }, [customLayouts])
 
   // Fetch lyrics when track changes
   useEffect(() => {
@@ -323,18 +325,25 @@ export default function App() {
     extractDominantColor(artwork).then((color) => setAccent(color === defaultTheme.accentColor ? theme.accentColor : color))
   }, [artwork, theme.accentColor])
 
-  // Poll for theme changes
+  // Poll for theme changes. Custom layout ids are local-only and must not be
+  // normalized back to a built-in layout by the Rust theme command.
   useEffect(() => {
     const timer = window.setInterval(() => {
       if (theme.id.startsWith('custom-')) return
       invoke<Theme>('get_theme').then((value) => {
-        const next = { ...value, layout: normalizeLayout(value.layout) }
+        const activeCustomLayout = customLayouts.some((item) => item.id === layoutStyle)
+        const layout = activeCustomLayout
+          ? layoutStyle
+          : customLayouts.some((item) => item.id === value.layout)
+            ? value.layout
+            : normalizeLayout(value.layout)
+        const next = { ...value, layout }
         setTheme((current) => JSON.stringify(current) === JSON.stringify(next) ? current : next)
-        setLayoutStyle(next.layout as LayoutId)
+        setLayoutStyle(next.layout)
       }).catch(() => undefined)
     }, 2000)
     return () => window.clearInterval(timer)
-  }, [theme.id])
+  }, [customLayouts, layoutStyle, theme.id])
 
   const changeMode = (nextMode: ViewMode) => {
     setMode(nextMode)
@@ -371,7 +380,9 @@ export default function App() {
     setLayoutStyle(style) // apply immediately; the saved value catches up
     const custom = customLayouts.find((layout) => layout.id === style)
     if (custom) {
-      setTheme((current) => ({ ...current, layout: style }))
+      const value = { ...theme, layout: style }
+      setTheme(value)
+      invoke('save_theme', { theme: value }).catch(() => undefined)
       return
     }
     if (!RUST_LAYOUTS.has(style as LayoutId)) {

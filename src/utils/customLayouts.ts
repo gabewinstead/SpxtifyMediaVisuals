@@ -1,6 +1,6 @@
 import { loadJson, saveJson } from './storage'
 
-export type WidgetType = 'lyrics' | 'cover' | 'track' | 'progress' | 'controls' | 'line' | 'clock'
+export type WidgetType = 'lyrics' | 'cover' | 'track' | 'line' | 'clock' | 'status' | 'lyric-count' | 'date'
 
 /** Position and size are percentages of the window, so layouts scale with it. */
 export type Widget = { id: string; type: WidgetType; x: number; y: number; w: number; h: number }
@@ -10,10 +10,11 @@ export const WIDGET_INFO: Record<WidgetType, { label: string; w: number; h: numb
   lyrics: { label: 'Lyrics', w: 50, h: 66 },
   cover: { label: 'Cover art', w: 24, h: 42 },
   track: { label: 'Title and artist', w: 30, h: 12 },
-  progress: { label: 'Progress bar', w: 60, h: 8 },
-  controls: { label: 'Playback controls', w: 24, h: 10 },
   line: { label: 'Current line only', w: 60, h: 20 },
   clock: { label: 'Clock', w: 14, h: 10 },
+  status: { label: 'Playback status', w: 20, h: 8 },
+  'lyric-count': { label: 'Lyric count', w: 20, h: 8 },
+  date: { label: 'Date', w: 24, h: 8 },
 }
 
 export const MIN_WIDGET_SIZE = 6
@@ -45,8 +46,8 @@ export function starterLayout(): CustomLayout {
       widget('cover', 6, 14, 24, 42),
       widget('track', 6, 58, 30, 12),
       widget('lyrics', 40, 10, 54, 68),
-      widget('progress', 6, 82, 88, 6),
-      widget('controls', 38, 89, 24, 10),
+      widget('status', 6, 82, 24, 8),
+      widget('clock', 70, 82, 24, 8),
     ],
   }
 }
