@@ -24,7 +24,7 @@ Spotify Lyrics Overlay turns the track already playing on your computer into a f
 
 | Synchronized lyrics | Album-art atmosphere | Your layout, your rules |
 | --- | --- | --- |
-| Follow along with time-synced lyrics fetched from LRCLIB. | Pulls artwork from iTunes and derives a rich accent color automatically. | Switch between lyrics, album cover, and combined views with live theme controls. |
+| Follow along with time-synced lyrics fetched from LRCLIB. | Pulls artwork from iTunes and derives a rich accent color automatically. | Freely rearrange widgets, drag and resize elements, and save custom layouts. |
 
 ## What makes it feel good
 
@@ -36,7 +36,7 @@ Spotify Lyrics Overlay turns the track already playing on your computer into a f
     </td>
     <td width="50%" valign="top">
       <h3>🎨 Themes that respond to the music</h3>
-      <p>Tune colors, type, opacity, blur, spacing, and corner radii. Album art can provide the accent, or you can choose your own.</p>
+      <p>Fine-tune accent, background, and text colors with HSL controls, adjust glow on lyrics, opacity, blur, size, and more. Album art can provide the accent, or you can choose your own.</p>
     </td>
   </tr>
   <tr>
@@ -49,6 +49,16 @@ Spotify Lyrics Overlay turns the track already playing on your computer into a f
       <p>Reads the active track through Windows SMTC or Linux MPRIS, updates progress in real time, and needs no lyrics API key.</p>
     </td>
   </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>🧩 Moveable layouts & widgets</h3>
+      <p>Drag any widget to reposition it, resize by the corners, add new widgets (cover art, lyrics, title & artist, clock, playback status, and more), then save your layout for next time.</p>
+    </td>
+    <td width="50%" valign="top">
+      <h3>✨ Custom color, glow & opacity</h3>
+      <p>Open the theme editor for precise HSL color control, glowing lyric effects, background blur, lyric size, and opacity adjustments — all live-previewed.</p>
+    </td>
+  </tr>
 </table>
 
 ## See it in action
@@ -58,7 +68,27 @@ Spotify Lyrics Overlay turns the track already playing on your computer into a f
   <img src="./src-tauri/icons/icon.png" alt="Spotify Lyrics Overlay app icon" width="18%" />
 </div>
 
-> **Tip:** Start with the combined view, then open settings to experiment with the accent, blur, opacity, and type controls. The theme is hot-reloaded from your per-user configuration.
+<br />
+
+### Layout editor — move, resize & add widgets
+
+Drag boxes to move them, pull corners to resize, add widgets from the toolbar, then save your custom arrangement.
+
+<div align="center">
+  <img src="https://cdn.discordapp.com/attachments/1207855250657124393/1565563455497576458/image.png?ex=6ae55c16&is=6ae40a96&hm=c29ff3a36c22e5c2efe846b9ee41265977e3af5067cf3ca72aaaa53d4445d1aa&" alt="Layout editor showing movable widgets, cover art, lyrics, and controls" width="860" />
+</div>
+
+<br />
+
+### Theme editor — custom colors, glow & opacity
+
+Dial in accent, background, and text colors with HSL sliders, control lyric glow intensity, background blur, lyric size, and opacity for a look that matches the music.
+
+<div align="center">
+  <img src="https://cdn.discordapp.com/attachments/1207855250657124393/1565563630986993797/image.png?ex=6ae55c40&is=6ae40ac0&hm=395e815b5a8642fc61c24bd0c881ca8ba177098b175fb7ac2c3fd5b6cbe64393&" alt="Theme editor with HSL color controls, glow, blur, and opacity settings" width="860" />
+</div>
+
+> **Tip:** Start with the combined view, then open the layout editor to rearrange widgets or the theme editor to experiment with accent, glow, opacity, and type controls. Themes and layouts are saved per-user and hot-reloaded.
 
 ## Get started
 
