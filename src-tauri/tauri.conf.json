@@ -4,7 +4,7 @@
   "version": "0.2.2",
   "identifier": "com.spotify.media.visuals",
   "build": { "beforeDevCommand": "npm run dev", "devUrl": "http://localhost:1420", "beforeBuildCommand": "npm run build", "frontendDist": "../dist" },
-  "app": { "windows": [{ "label": "main", "title": "Now Playing", "width": 1280, "height": 800, "minWidth": 400, "minHeight": 300, "fullscreen": false, "decorations": false, "transparent": true, "alwaysOnTop": true, "resizable": true, "center": true }], "security": { "csp": "default-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self' https://lrclib.net https://itunes.apple.com; font-src 'self' https://fonts.gstatic.com" } },
+  "app": { "windows": [{ "label": "main", "title": "Now Playing", "width": 1280, "height": 800, "minWidth": 400, "minHeight": 300, "fullscreen": false, "decorations": false, "transparent": true, "alwaysOnTop": false, "resizable": true, "center": true }], "security": { "csp": "default-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self' https://lrclib.net https://itunes.apple.com; font-src 'self' https://fonts.gstatic.com" } },
   "bundle": {
     "active": true,
     "targets": ["nsis", "appimage", "deb"],
@@ -20,7 +20,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEE5RTg2QTc5NUQ2QkExMUEKUldRYW9XdGRlV3JvcWR2RERpelZjb2RrOUtUaHlYVWNObmpJL3VHZHRxK2pQVjNEUVBETDBXbjIK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDUzQjlGOEI5MzVDRTdFQTkKUldTcGZzNDF1Zmk1VSsxdVdHNElsSFhJSjJkd2Z6QTVJK2tTZjRGM2dXTjU2ZlA1R3kwTTBMazcK",
       "endpoints": [
         "https://raw.githubusercontent.com/gabewinstead/SpxtifyMediaVisuals/main/latest.json"
       ]

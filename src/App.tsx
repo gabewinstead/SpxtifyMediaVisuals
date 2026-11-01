@@ -77,10 +77,10 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-async function fetchLyricsDirect(artist: string, title: string): Promise<string> {
+async function fetchLyricsDirect(artist: string, title: string, signal: AbortSignal): Promise<string> {
   try {
     const url = `https://lrclib.net/api/search?track_name=${encodeURIComponent(title)}&artist_name=${encodeURIComponent(artist)}`
-    const resp = await fetch(url)
+    const resp = await fetch(url, { signal })
     if (resp.ok) {
       const data = await resp.json()
       if (Array.isArray(data)) {
@@ -92,19 +92,20 @@ async function fetchLyricsDirect(artist: string, title: string): Promise<string>
         }
       }
     }
-  } catch (e) {
-    console.error('LRCLIB fetch failed:', e)
+  } catch (error) {
+    if (signal.aborted) return ''
+    console.warn('LRCLIB fetch failed:', error)
   }
   try {
     const url2 = `https://api.qobuzify.app/v2/track?name=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist)}`
-    const resp2 = await fetch(url2)
+    const resp2 = await fetch(url2, { signal })
     if (resp2.ok) {
       const data2 = await resp2.json()
       if (data2.syncedLyrics) return data2.syncedLyrics
       if (data2.lyrics) return data2.lyrics
     }
-  } catch (e) {
-    console.error('Qobuzify fetch failed:', e)
+  } catch (error) {
+    if (!signal.aborted) console.warn('Qobuzify fetch failed:', error)
   }
   return ''
 }
@@ -134,7 +135,7 @@ export default function App() {
   const [mode, setMode] = useState<ViewMode>('lyrics')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const windowOpacity = 1
-  const [alwaysOnTop, setAlwaysOnTop] = useState(true)
+  const [alwaysOnTop, setAlwaysOnTop] = useState(false)
   const [lyricsLoading, setLyricsLoading] = useState(false)
   const [updateStatus, setUpdateStatus] = useState('')
   const [customThemes, setCustomThemes] = useState<CustomTheme[]>(() => loadCustomThemes())
@@ -149,6 +150,12 @@ export default function App() {
   const getPosition = usePlaybackClock(track.position, track.playing, `${track.artist}::${track.title}`)
   const activeIndex = useActiveLyricIndex(lines, getPosition)
   const hasTrack = Boolean(track.title.trim())
+
+  useEffect(() => {
+    void appWindow.setAlwaysOnTop(false).catch((error) => {
+      console.warn('Unable to disable always-on-top:', error)
+    })
+  }, [appWindow])
 
   const installUpdate = async (notifyWhenCurrent: boolean) => {
     if (!isTauri()) return
@@ -255,19 +262,31 @@ export default function App() {
         .then((current) => {
           if (!active || !current.title?.trim()) return
           setTrack((previous) => patchTrack(previous, {
+            title: current.title,
+            artist: current.artist,
+            album: current.album,
             position: current.position,
             duration: current.duration,
             playing: current.playing,
             albumArtUrl: current.albumArtUrl,
           }))
         })
-        .catch(() => undefined)
+        .catch((error) => {
+          if (active) console.warn('Unable to refresh Spotify playback state:', error)
+        })
     }
     refreshTrack()
     const timer = window.setInterval(refreshTrack, 250)
+    const onVisibilityChange = () => { if (document.visibilityState === 'visible') refreshTrack() }
+    window.addEventListener('focus', refreshTrack)
+    window.addEventListener('pageshow', refreshTrack)
+    document.addEventListener('visibilitychange', onVisibilityChange)
     return () => {
       active = false
       window.clearInterval(timer)
+      window.removeEventListener('focus', refreshTrack)
+      window.removeEventListener('pageshow', refreshTrack)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
     }
   }, [])
 
@@ -290,8 +309,10 @@ export default function App() {
     setLyricsLoading(true)
     setLines([])
 
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), 15000)
     const doFetch = async () => {
-      const lyrics = await fetchLyricsDirect(track.artist, track.title)
+      const lyrics = await fetchLyricsDirect(track.artist, track.title, controller.signal)
       if (!active) return
       setLines(parseLyricsPayload(lyrics))
       setLyricsLoading(false)
@@ -303,7 +324,11 @@ export default function App() {
       setLyricsLoading(false)
     })
 
-    return () => { active = false }
+    return () => {
+      active = false
+      controller.abort()
+      window.clearTimeout(timeout)
+    }
   }, [track.title, track.artist])
 
   // Fetch artwork separately

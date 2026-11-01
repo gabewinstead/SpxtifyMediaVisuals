@@ -200,17 +200,21 @@ pub fn start(app: AppHandle) {
             GlobalSystemMediaTransportControlsSessionPlaybackStatus,
         };
 
-        let manager = match GlobalSystemMediaTransportControlsSessionManager::RequestAsync()
-            .and_then(|operation| operation.get())
-        {
-            Ok(manager) => manager,
-            Err(_) => {
-                return;
-            }
-        };
-        let mut last_key = String::new();
         loop {
-            if let Some(session) = spotify_session(&manager) {
+            let manager = match GlobalSystemMediaTransportControlsSessionManager::RequestAsync()
+                .and_then(|operation| operation.get())
+            {
+                Ok(manager) => manager,
+                Err(_) => {
+                    std::thread::sleep(Duration::from_secs(2));
+                    continue;
+                }
+            };
+            let mut last_key = String::new();
+            loop {
+                let Some(session) = spotify_session(&manager) else {
+                    break;
+                };
                 let properties = session
                     .TryGetMediaPropertiesAsync()
                     .and_then(|operation| operation.get());
@@ -226,11 +230,11 @@ pub fn start(app: AppHandle) {
                         .as_ref()
                         .and_then(|info| info.PlaybackStatus().ok())
                         == Some(GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing);
-                    let key = format!("{title}::{artist}");
+                    let album = properties.AlbumTitle().unwrap_or_default().to_string();
+                    let key = format!("{title}::{artist}::{album}");
                     if key != last_key && FRONTEND_READY.load(Ordering::Acquire) {
                         last_key = key;
                         // The thumbnail is large, so only read it when the track changes
-                        let album = properties.AlbumTitle().unwrap_or_default().to_string();
                         let album_art_url = thumbnail_data_url(&properties);
                         let _ = app.emit(
                             "track-changed",
@@ -258,8 +262,9 @@ pub fn start(app: AppHandle) {
                         }
                     }
                 }
+                std::thread::sleep(POLL_INTERVAL);
             }
-            std::thread::sleep(POLL_INTERVAL);
+            std::thread::sleep(Duration::from_secs(1));
         }
     });
 }
