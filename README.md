@@ -1,7 +1,7 @@
 <div align="center">
   <img src="./src-tauri/icons/icon.png" alt="Spotify Lyrics Overlay icon" width="112" />
   <h1>Spotify Lyrics Overlay</h1>
-  <p><strong>A beautiful, always-on-top companion for the music already playing on your desktop.</strong></p>
+  <p><strong>A beautiful desktop companion for the music already playing on your computer.</strong></p>
   <p>
     <a href="https://github.com/gabewinstead/SpxtifyMediaVisuals/releases"><img src="https://img.shields.io/github/v/release/gabewinstead/SpxtifyMediaVisuals?style=flat-square&color=1ed760" alt="Latest release" /></a>
     <a href="https://github.com/gabewinstead/SpxtifyMediaVisuals/actions"><img src="https://img.shields.io/github/actions/workflow/status/gabewinstead/SpxtifyMediaVisuals/build.yml?style=flat-square&label=build" alt="Build status" /></a>
@@ -42,7 +42,7 @@ Spotify Lyrics Overlay turns the track already playing on your computer into a f
   <tr>
     <td width="50%" valign="top">
       <h3>🖥️ Made for your desktop</h3>
-      <p>Frameless, draggable, resizable, and always on top. Put it beside your work, over a game, or wherever the music belongs.</p>
+      <p>Frameless, draggable, and resizable, with optional always-on-top behavior. Put it beside your work, over a game, or wherever the music belongs.</p>
     </td>
     <td width="50%" valign="top">
       <h3>⚡ Quietly automatic</h3>
