@@ -8,6 +8,7 @@ export type CanvasData = {
   hasTrack: boolean
   title: string
   artist: string
+  album?: string
   playing: boolean
   duration: number
   cover?: string
@@ -119,6 +120,7 @@ function renderWidget(type: WidgetType, data: CanvasData, preview: boolean) {
       <h1>{data.hasTrack ? data.title : preview ? 'Song title' : 'Waiting for playback'}</h1>
       <p>{data.hasTrack ? data.artist : preview ? 'Artist name' : ''}</p>
     </div>
+    case 'album': return <p className="widget-label">{data.album || (preview ? 'Album name' : 'No album')}</p>
     case 'line': return <p key={data.activeIndex} className="widget-line">
       {data.lines[data.activeIndex]?.text ?? (preview ? 'The current lyric line' : '')}
     </p>

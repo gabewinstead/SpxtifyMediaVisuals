@@ -152,6 +152,7 @@ function mergeTrack(previous: Track, payload: TrackPayload): Track {
 
 export default function App() {
   const appWindow = getCurrentWindow()
+  const settingsRef = useRef<HTMLDivElement>(null)
   const [track, setTrack] = useState<Track>({ title: '', artist: '', duration: 0, position: 0, playing: false })
   const [lines, setLines] = useState<LyricLine[]>([])
   const [artwork, setArtwork] = useState<string>()
@@ -432,6 +433,16 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [studioOpen])
 
+  useEffect(() => {
+    if (!settingsOpen) return undefined
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      const target = event.target
+      if (target instanceof Node && !settingsRef.current?.contains(target)) setSettingsOpen(false)
+    }
+    document.addEventListener('pointerdown', closeOnOutsidePointer)
+    return () => document.removeEventListener('pointerdown', closeOnOutsidePointer)
+  }, [settingsOpen])
+
   const changeMode = (nextMode: ViewMode) => {
     setMode(nextMode)
     invoke('save_view_mode', { mode: nextMode }).catch(() => undefined)
@@ -556,11 +567,14 @@ export default function App() {
   }
 
   const canvasData = {
-    hasTrack, title: track.title, artist: track.artist, playing: track.playing, duration: track.duration,
+    hasTrack, title: track.title, artist: track.artist, album: track.album, playing: track.playing, duration: track.duration,
     cover, lines, activeIndex, lyricsLoading, getPosition, accent,
   }
 
-  return <main className={`app-shell theme-${shownTheme.id} mode-${mode} layout-${canvasWidgets ? 'custom' : layoutStyle}${studioOpen ? ' is-editing' : ''}`} style={{
+  return <main
+    className={`app-shell theme-${shownTheme.id} mode-${mode} layout-${canvasWidgets ? 'custom' : layoutStyle}${studioOpen ? ' is-editing' : ''}`}
+    onContextMenu={(event) => event.preventDefault()}
+    style={{
     '--accent': accent, '--background': shownTheme.backgroundColor, '--secondary': shownTheme.secondaryBackground,
     '--text': shownTheme.textColor, '--muted': shownTheme.mutedTextColor, '--font': shownTheme.fontFamily,
     '--title-size': shownTheme.titleSize, '--artist-size': shownTheme.artistSize, '--lyric-size': shownTheme.lyricSize,
@@ -668,7 +682,7 @@ export default function App() {
       <span>{formatTime(track.duration)}</span>
     </div>
 
-    <div className="settings-wrap">
+    <div className="settings-wrap" ref={settingsRef}>
       <button
         className="settings-button"
         onClick={() => setSettingsOpen((open) => !open)}

@@ -1,6 +1,6 @@
 import { loadJson, saveJson } from './storage'
 
-export type WidgetType = 'lyrics' | 'cover' | 'track' | 'line' | 'clock' | 'status' | 'lyric-count' | 'date'
+export type WidgetType = 'lyrics' | 'cover' | 'track' | 'album' | 'line' | 'clock' | 'status' | 'lyric-count' | 'date'
 
 /** Position and size are percentages of the window, so layouts scale with it. */
 export type Widget = { id: string; type: WidgetType; x: number; y: number; w: number; h: number }
@@ -10,6 +10,7 @@ export const WIDGET_INFO: Record<WidgetType, { label: string; w: number; h: numb
   lyrics: { label: 'Lyrics', w: 50, h: 66 },
   cover: { label: 'Cover art', w: 24, h: 42 },
   track: { label: 'Title and artist', w: 30, h: 12 },
+  album: { label: 'Album name', w: 28, h: 8 },
   line: { label: 'Current line only', w: 60, h: 20 },
   clock: { label: 'Clock', w: 14, h: 10 },
   status: { label: 'Playback status', w: 20, h: 8 },
