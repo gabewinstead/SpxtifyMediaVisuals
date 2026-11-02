@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::{fs, path::PathBuf};
+use std::{fs, io::Write, path::{Path, PathBuf}};
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -58,6 +58,32 @@ impl Default for Theme {
     }
 }
 
+const BUILTIN_LAYOUTS: [&str; 4] = ["center", "left-aligned", "minimal", "cinematic"];
+
+/// Built-in layouts, plus user-made ones whose ids the frontend generates as "my-<letters, digits, hyphens>".
+fn is_valid_layout(style: &str) -> bool {
+    BUILTIN_LAYOUTS.contains(&style)
+        || (style.starts_with("my-")
+            && style.len() <= 64
+            && style.chars().all(|c| c.is_ascii_alphanumeric() || c == '-'))
+}
+
+/// Writes through a temporary file and renames it into place, so a crash or power cut mid-write can never
+/// leave a half-written settings file behind.
+fn write_atomic(path: &Path, contents: &str) -> Result<(), String> {
+    let temporary = path.with_extension("tmp");
+    let mut file = fs::File::create(&temporary).map_err(|error| error.to_string())?;
+    file.write_all(contents.as_bytes()).map_err(|error| error.to_string())?;
+    file.sync_all().map_err(|error| error.to_string())?;
+    drop(file);
+    fs::rename(&temporary, path).map_err(|error| error.to_string())
+}
+
+fn write_theme(path: &Path, theme: &Theme) -> Result<(), String> {
+    let json = serde_json::to_string_pretty(theme).map_err(|error| error.to_string())?;
+    write_atomic(path, &json)
+}
+
 fn settings_dir() -> Result<PathBuf, String> {
     let path = dirs::config_dir().ok_or_else(|| "Unable to locate the user config directory".to_string())?
         .join("spotify-media-visuals");
@@ -68,21 +94,37 @@ fn settings_dir() -> Result<PathBuf, String> {
 #[tauri::command]
 pub fn get_theme() -> Result<Theme, String> {
     let path = settings_dir()?.join("theme.json");
-    if !path.exists() {
-        let theme = Theme::default();
-        fs::write(&path, serde_json::to_string_pretty(&theme).map_err(|error| error.to_string())?)
-            .map_err(|error| error.to_string())?;
-        return Ok(theme);
+    let contents = match fs::read_to_string(&path) {
+        Ok(contents) => contents,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            let theme = Theme::default();
+            write_theme(&path, &theme)?;
+            return Ok(theme);
+        }
+        // Any other read problem (for example a brief lock) is not a reason to overwrite a good file
+        Err(error) => return Err(error.to_string()),
+    };
+    let mut theme = match serde_json::from_str::<Theme>(&contents) {
+        Ok(theme) => theme,
+        Err(_) => {
+            // Unreadable: keep a copy for the user and start again from the defaults
+            let _ = fs::rename(&path, path.with_extension("json.bak"));
+            let theme = Theme::default();
+            write_theme(&path, &theme)?;
+            return Ok(theme);
+        }
+    };
+    // Layouts that no longer exist ("split", "full-bleed") fall back to the default
+    if !is_valid_layout(&theme.layout) {
+        theme.layout = default_layout();
+        write_theme(&path, &theme)?;
     }
-    let contents = fs::read_to_string(path).map_err(|error| error.to_string())?;
-    serde_json::from_str(&contents).map_err(|error| error.to_string())
+    Ok(theme)
 }
 
 #[tauri::command]
 pub fn save_theme(theme: Theme) -> Result<(), String> {
-    let path = settings_dir()?.join("theme.json");
-    fs::write(path, serde_json::to_string_pretty(&theme).map_err(|error| error.to_string())?)
-        .map_err(|error| error.to_string())
+    write_theme(&settings_dir()?.join("theme.json"), &theme)
 }
 
 #[tauri::command]
@@ -112,7 +154,7 @@ pub fn save_theme_preset(id: String) -> Result<Theme, String> {
 
 #[tauri::command]
 pub fn save_layout(style: String) -> Result<Theme, String> {
-    if !["center", "left-aligned", "minimal", "cinematic"].contains(&style.as_str()) {
+    if !is_valid_layout(&style) {
         return Err("Invalid layout style".to_string());
     }
     let mut theme = get_theme()?;
@@ -134,5 +176,5 @@ pub fn save_view_mode(mode: String) -> Result<(), String> {
     if !["lyrics", "album", "artist", "combined"].contains(&mode.as_str()) {
         return Err("Invalid view mode".to_string());
     }
-    fs::write(settings_dir()?.join("view-mode"), mode).map_err(|error| error.to_string())
+    write_atomic(&settings_dir()?.join("view-mode"), &mode)
 }

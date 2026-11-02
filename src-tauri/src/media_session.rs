@@ -30,8 +30,11 @@ static FRONTEND_READY: AtomicBool = AtomicBool::new(false);
 
 #[cfg(target_os = "windows")]
 const POLL_INTERVAL: Duration = Duration::from_millis(250);
+/// Spotify often publishes the new cover a moment after the new title, so the cover is re-read a few times.
 #[cfg(target_os = "windows")]
-const METADATA_INTERVAL: Duration = Duration::from_secs(2);
+const ART_RETRY_INTERVAL: Duration = Duration::from_millis(1200);
+#[cfg(target_os = "windows")]
+const ART_RETRIES: u8 = 3;
 
 #[cfg(target_os = "windows")]
 fn spotify_session(
@@ -44,6 +47,17 @@ fn spotify_session(
         let source = session.SourceAppUserModelId().ok()?.to_string();
         source.to_lowercase().contains("spotify").then_some(session)
     })
+}
+
+/// The session that playback commands should go to: Spotify if it is running, otherwise whatever Windows
+/// considers current. `GetCurrentSession` alone can pick a browser tab that happens to be playing.
+#[cfg(target_os = "windows")]
+fn target_session(
+    manager: &windows::Media::Control::GlobalSystemMediaTransportControlsSessionManager,
+) -> Result<windows::Media::Control::GlobalSystemMediaTransportControlsSession, String> {
+    spotify_session(manager)
+        .or_else(|| manager.GetCurrentSession().ok())
+        .ok_or_else(|| "No media session is available".to_string())
 }
 
 /// Windows reports the timeline position as it was at `LastUpdatedTime` and never advances it on its
@@ -85,7 +99,8 @@ pub fn frontend_ready() {
 }
 
 #[tauri::command]
-pub async fn get_current_track() -> Result<Track, String> {
+/// `include_art` (JS: `includeArt`) defaults to true. Frequent callers pass false to skip encoding the cover.
+pub async fn get_current_track(include_art: Option<bool>) -> Result<Track, String> {
     #[cfg(target_os = "windows")]
     {
         use windows::Media::Control::{
@@ -110,7 +125,7 @@ pub async fn get_current_track() -> Result<Track, String> {
             title: properties.Title().map_err(|error| error.to_string())?.to_string(),
             artist: properties.Artist().map_err(|error| error.to_string())?.to_string(),
             album: properties.AlbumTitle().unwrap_or_default().to_string(),
-            album_art_url: thumbnail_data_url(&properties),
+            album_art_url: if include_art.unwrap_or(true) { thumbnail_data_url(&properties) } else { None },
             playing,
             ..Default::default()
         };
@@ -123,7 +138,10 @@ pub async fn get_current_track() -> Result<Track, String> {
         return Ok(track);
     }
     #[cfg(not(target_os = "windows"))]
-    { Err("Current media track is not supported on this platform".to_string()) }
+    {
+        let _ = include_art;
+        Err("Current media track is not supported on this platform".to_string())
+    }
 }
 
 #[tauri::command]
@@ -133,7 +151,7 @@ pub async fn media_play_pause() -> Result<(), String> {
         use windows::Media::Control::GlobalSystemMediaTransportControlsSessionManager;
         let manager = GlobalSystemMediaTransportControlsSessionManager::RequestAsync()
             .and_then(|operation| operation.get()).map_err(|error| error.to_string())?;
-        let session = manager.GetCurrentSession().map_err(|error| error.to_string())?;
+        let session = target_session(&manager)?;
         session.TryTogglePlayPauseAsync().map_err(|error| error.to_string())?.get().map_err(|error| error.to_string())?;
         return Ok(());
     }
@@ -150,7 +168,7 @@ pub async fn media_next() -> Result<(), String> {
         use windows::Media::Control::GlobalSystemMediaTransportControlsSessionManager;
         let manager = GlobalSystemMediaTransportControlsSessionManager::RequestAsync()
             .and_then(|operation| operation.get()).map_err(|error| error.to_string())?;
-        let session = manager.GetCurrentSession().map_err(|error| error.to_string())?;
+        let session = target_session(&manager)?;
         session.TrySkipNextAsync().map_err(|error| error.to_string())?.get().map_err(|error| error.to_string())?;
         return Ok(());
     }
@@ -167,7 +185,7 @@ pub async fn media_previous() -> Result<(), String> {
         use windows::Media::Control::GlobalSystemMediaTransportControlsSessionManager;
         let manager = GlobalSystemMediaTransportControlsSessionManager::RequestAsync()
             .and_then(|operation| operation.get()).map_err(|error| error.to_string())?;
-        let session = manager.GetCurrentSession().map_err(|error| error.to_string())?;
+        let session = target_session(&manager)?;
         session.TrySkipPreviousAsync().map_err(|error| error.to_string())?.get().map_err(|error| error.to_string())?;
         return Ok(());
     }
@@ -189,20 +207,108 @@ pub struct Track {
     pub playing: bool,
 }
 
+/// What the frontend has already been told about the current song.
+#[cfg(target_os = "windows")]
+#[derive(Default)]
+struct Announced {
+    /// "title::artist". A change means a new song.
+    key: String,
+    album: String,
+    art: Option<String>,
+    art_checks_left: u8,
+    next_art_check: Option<std::time::Instant>,
+}
+
+/// One poll: announce a new song (or a late album or cover for the same song), then report the position.
+///
+/// The title is read on every poll, which is cheap, so a song change is noticed within 250ms. The cover is
+/// expensive to read and encode, so it is only read for a new song, when the album changes, and for a few
+/// retries afterwards. The frontend treats repeats of "track-changed" for one song as cover refreshes.
+#[cfg(target_os = "windows")]
+fn poll_once(
+    app: &AppHandle,
+    session: &windows::Media::Control::GlobalSystemMediaTransportControlsSession,
+    announced: &mut Announced,
+) {
+    use windows::Media::Control::GlobalSystemMediaTransportControlsSessionPlaybackStatus;
+
+    let Ok(properties) = session
+        .TryGetMediaPropertiesAsync()
+        .and_then(|operation| operation.get())
+    else {
+        return;
+    };
+    let title = properties.Title().unwrap_or_default().to_string();
+    if title.trim().is_empty() {
+        return;
+    }
+    let artist = properties.Artist().unwrap_or_default().to_string();
+    let album = properties.AlbumTitle().unwrap_or_default().to_string();
+
+    let playing = session
+        .GetPlaybackInfo()
+        .ok()
+        .and_then(|info| info.PlaybackStatus().ok())
+        == Some(GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing);
+
+    if FRONTEND_READY.load(Ordering::Acquire) {
+        let now = std::time::Instant::now();
+        let key = format!("{title}::{artist}");
+        let new_track = key != announced.key;
+        let art_due = announced.art_checks_left > 0
+            && announced.next_art_check.map_or(false, |at| now >= at);
+
+        if new_track || album != announced.album || art_due {
+            let art = thumbnail_data_url(&properties);
+            if new_track {
+                announced.art_checks_left = ART_RETRIES;
+            } else if art_due {
+                announced.art_checks_left -= 1;
+            }
+            announced.next_art_check = Some(now + ART_RETRY_INTERVAL);
+
+            if new_track || album != announced.album || art != announced.art {
+                let _ = app.emit(
+                    "track-changed",
+                    Track {
+                        title: title.clone(),
+                        artist: artist.clone(),
+                        album: album.clone(),
+                        album_art_url: art.clone(),
+                        playing,
+                        ..Default::default()
+                    },
+                );
+            }
+            announced.key = key;
+            announced.album = album;
+            announced.art = art;
+        }
+    }
+
+    if let Ok(timeline) = session.GetTimelineProperties() {
+        if let Some((position, duration)) = timeline_snapshot(&timeline, playing) {
+            let _ = app.emit(
+                "position-updated",
+                serde_json::json!({
+                    "position": position,
+                    "duration": duration,
+                    "playing": playing
+                }),
+            );
+        }
+    }
+}
+
 #[cfg(target_os = "windows")]
 pub fn start(app: AppHandle) {
     std::thread::spawn(move || {
-        #[cfg(target_os = "windows")]
-        {
-            use windows::Win32::System::Com::{CoInitializeEx, COINIT_MULTITHREADED};
-            let _ = unsafe { CoInitializeEx(None, COINIT_MULTITHREADED) };
-        }
-        use windows::Media::Control::{
-            GlobalSystemMediaTransportControlsSessionManager,
-            GlobalSystemMediaTransportControlsSessionPlaybackStatus,
-        };
+        use windows::Media::Control::GlobalSystemMediaTransportControlsSessionManager;
+        use windows::Win32::System::Com::{CoInitializeEx, COINIT_MULTITHREADED};
+        let _ = unsafe { CoInitializeEx(None, COINIT_MULTITHREADED) };
 
         loop {
+            // A fresh manager every time Spotify (re)appears, so a stale session can never stick around
             let manager = match GlobalSystemMediaTransportControlsSessionManager::RequestAsync()
                 .and_then(|operation| operation.get())
             {
@@ -212,67 +318,9 @@ pub fn start(app: AppHandle) {
                     continue;
                 }
             };
-            let mut last_key = String::new();
-            let mut metadata = None;
-            let mut next_metadata_refresh = std::time::Instant::now();
-            loop {
-                let Some(session) = spotify_session(&manager) else {
-                    break;
-                };
-                if metadata.is_none() || std::time::Instant::now() >= next_metadata_refresh {
-                    if let Ok(properties) = session
-                        .TryGetMediaPropertiesAsync()
-                        .and_then(|operation| operation.get())
-                    {
-                        metadata = Some((
-                            properties.Title().unwrap_or_default().to_string(),
-                            properties.Artist().unwrap_or_default().to_string(),
-                            properties.AlbumTitle().unwrap_or_default().to_string(),
-                            thumbnail_data_url(&properties),
-                        ));
-                    }
-                    next_metadata_refresh = std::time::Instant::now() + METADATA_INTERVAL;
-                }
-
-                if let Some((title, artist, album, album_art_url)) = &metadata {
-                    if title.trim().is_empty() {
-                        std::thread::sleep(POLL_INTERVAL);
-                        continue;
-                    }
-                    let playback = session.GetPlaybackInfo().ok();
-                    let playing = playback
-                        .as_ref()
-                        .and_then(|info| info.PlaybackStatus().ok())
-                        == Some(GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing);
-                    let key = format!("{title}::{artist}::{album}");
-                    if key != last_key && FRONTEND_READY.load(Ordering::Acquire) {
-                        last_key = key;
-                        let _ = app.emit(
-                            "track-changed",
-                            Track {
-                                title: title.clone(),
-                                artist: artist.clone(),
-                                album: album.clone(),
-                                album_art_url: album_art_url.clone(),
-                                playing,
-                                ..Default::default()
-                            },
-                        );
-                    }
-
-                    if let Ok(timeline) = session.GetTimelineProperties() {
-                        if let Some((position, duration)) = timeline_snapshot(&timeline, playing) {
-                            let _ = app.emit(
-                                "position-updated",
-                                serde_json::json!({
-                                    "position": position,
-                                    "duration": duration,
-                                    "playing": playing
-                                }),
-                            );
-                        }
-                    }
-                }
+            let mut announced = Announced::default();
+            while let Some(session) = spotify_session(&manager) {
+                poll_once(&app, &session, &mut announced);
                 std::thread::sleep(POLL_INTERVAL);
             }
             std::thread::sleep(Duration::from_secs(1));
