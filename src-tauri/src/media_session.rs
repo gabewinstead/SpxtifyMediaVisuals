@@ -30,6 +30,8 @@ static FRONTEND_READY: AtomicBool = AtomicBool::new(false);
 
 #[cfg(target_os = "windows")]
 const POLL_INTERVAL: Duration = Duration::from_millis(250);
+#[cfg(target_os = "windows")]
+const METADATA_INTERVAL: Duration = Duration::from_secs(2);
 
 #[cfg(target_os = "windows")]
 fn spotify_session(
@@ -211,16 +213,28 @@ pub fn start(app: AppHandle) {
                 }
             };
             let mut last_key = String::new();
+            let mut metadata = None;
+            let mut next_metadata_refresh = std::time::Instant::now();
             loop {
                 let Some(session) = spotify_session(&manager) else {
                     break;
                 };
-                let properties = session
-                    .TryGetMediaPropertiesAsync()
-                    .and_then(|operation| operation.get());
-                if let Ok(properties) = properties {
-                    let title = properties.Title().unwrap_or_default().to_string();
-                    let artist = properties.Artist().unwrap_or_default().to_string();
+                if metadata.is_none() || std::time::Instant::now() >= next_metadata_refresh {
+                    if let Ok(properties) = session
+                        .TryGetMediaPropertiesAsync()
+                        .and_then(|operation| operation.get())
+                    {
+                        metadata = Some((
+                            properties.Title().unwrap_or_default().to_string(),
+                            properties.Artist().unwrap_or_default().to_string(),
+                            properties.AlbumTitle().unwrap_or_default().to_string(),
+                            thumbnail_data_url(&properties),
+                        ));
+                    }
+                    next_metadata_refresh = std::time::Instant::now() + METADATA_INTERVAL;
+                }
+
+                if let Some((title, artist, album, album_art_url)) = &metadata {
                     if title.trim().is_empty() {
                         std::thread::sleep(POLL_INTERVAL);
                         continue;
@@ -230,19 +244,16 @@ pub fn start(app: AppHandle) {
                         .as_ref()
                         .and_then(|info| info.PlaybackStatus().ok())
                         == Some(GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing);
-                    let album = properties.AlbumTitle().unwrap_or_default().to_string();
                     let key = format!("{title}::{artist}::{album}");
                     if key != last_key && FRONTEND_READY.load(Ordering::Acquire) {
                         last_key = key;
-                        // The thumbnail is large, so only read it when the track changes
-                        let album_art_url = thumbnail_data_url(&properties);
                         let _ = app.emit(
                             "track-changed",
                             Track {
-                                title,
-                                artist,
-                                album,
-                                album_art_url,
+                                title: title.clone(),
+                                artist: artist.clone(),
+                                album: album.clone(),
+                                album_art_url: album_art_url.clone(),
                                 playing,
                                 ..Default::default()
                             },

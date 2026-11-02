@@ -254,7 +254,8 @@ export default function App() {
     }
   }, [])
 
-  // Poll for position every 250ms
+  // The backend emits smooth position events. This slower poll is only a
+  // recovery path for missed media events after sleep or Spotify reconnects.
   useEffect(() => {
     let active = true
     const refreshTrack = () => {
@@ -276,7 +277,7 @@ export default function App() {
         })
     }
     refreshTrack()
-    const timer = window.setInterval(refreshTrack, 250)
+    const timer = window.setInterval(refreshTrack, 2000)
     const onVisibilityChange = () => { if (document.visibilityState === 'visible') refreshTrack() }
     window.addEventListener('focus', refreshTrack)
     window.addEventListener('pageshow', refreshTrack)
