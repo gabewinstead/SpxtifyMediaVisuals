@@ -1,90 +1,98 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#07100b" />
-    <meta name="description" content="Spotify Lyrics Overlay — a beautiful, always-on-top desktop companion for lyrics and album art." />
-    <title>Spotify Lyrics Overlay — Your music, made visible</title>
+    <meta name="theme-color" content="#0b0d12" />
+    <meta name="description" content="Spxtify Media Visuals — a quiet desktop companion for synchronized lyrics, album art, and custom layouts." />
+    <title>Spxtify Media Visuals — Music, in view</title>
     <link rel="icon" href="./assets/icon.png" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="noise" aria-hidden="true"></div>
     <header class="site-header shell">
-      <a class="brand" href="#top" aria-label="Spotify Lyrics Overlay home">
-        <img src="./assets/icon.png" alt="" />
-        <span>Spotify Lyrics Overlay</span>
-      </a>
-      <nav class="nav-links" aria-label="Main navigation">
+      <a class="brand" href="#top"><img src="./assets/icon.png" alt="" /><span>Spxtify Media Visuals</span></a>
+      <nav aria-label="Main navigation">
         <a href="#features">Features</a>
-        <a href="#preview">Preview</a>
-        <a href="https://github.com/gabewinstead/SpxtifyMediaVisuals" target="_blank" rel="noreferrer">GitHub <span aria-hidden="true">↗</span></a>
+        <a href="#studio">Studio</a>
+        <a href="https://github.com/gabewinstead/SpxtifyMediaVisuals" target="_blank" rel="noreferrer">GitHub ↗</a>
       </nav>
     </header>
 
     <main id="top">
       <section class="hero shell">
         <div class="hero-copy">
-          <div class="eyebrow">Your music, made visible</div>
-          <h1>Lyrics that live <em>where you do.</em></h1>
-          <p class="hero-lede">A beautiful, always-on-top desktop companion for synchronized lyrics, album art, and the track already playing.</p>
-          <div class="hero-actions">
-            <a class="button button-primary download-link" href="https://github.com/gabewinstead/SpxtifyMediaVisuals/releases/latest" target="_blank" rel="noreferrer">
-              <span class="button-icon">↓</span>
-              <span><strong>Download for Windows</strong><small class="release-label">Latest release</small></span>
-            </a>
-            <a class="button button-ghost" href="https://github.com/gabewinstead/SpxtifyMediaVisuals" target="_blank" rel="noreferrer">Explore on GitHub <span>↗</span></a>
+          <p class="kicker">A small window for a big feeling</p>
+          <h1>Keep the song<br /><em>in view.</em></h1>
+          <p class="lede">Synchronized lyrics, album-art atmosphere, and a layout that fits your desktop — without opening another full-size player.</p>
+          <div class="actions">
+            <a class="button primary download-link" href="https://github.com/gabewinstead/SpxtifyMediaVisuals/releases/latest" target="_blank" rel="noreferrer">Download for Windows <span>↓</span></a>
+            <a class="button" href="#features">See what’s new <span>↓</span></a>
           </div>
-          <p class="download-note">Free for personal use · Windows 10/11 · No account required</p>
+          <p class="fine-print"><span class="release-label">Latest release</span> · Windows 10/11 · No account required</p>
         </div>
-        <div class="hero-art" id="preview" aria-label="Product preview">
-          <div class="art-glow"></div>
-          <div class="window-chrome"><span></span><span></span><span></span><b>Now Playing</b></div>
-          <div class="mock-player">
-            <div class="mock-topline"><span>NOW PLAYING</span><span class="equalizer"><i></i><i></i><i></i><i></i></span></div>
-            <div class="mock-lyrics"><span>We are the music makers</span><strong>And we are the dreamers of dreams</strong><span>Wandering through the open air</span></div>
-            <div class="mock-track"><div class="mock-album"></div><div><strong>Dreams in Motion</strong><span>Spotify Lyrics Overlay</span></div><b>◖◗</b></div>
-            <div class="mock-progress"><span></span></div>
-          </div>
+        <div class="app-preview" id="preview" aria-label="Spxtify Media Visuals preview">
+          <img src="../src/preview.png" alt="Spxtify Media Visuals showing synchronized lyrics and album artwork" />
+          <div class="preview-caption"><span>Now Playing</span><strong>Runs quietly beside everything else.</strong></div>
         </div>
       </section>
 
-      <section class="proof shell">
-        <p>BUILT FOR THE MOMENT BETWEEN THE SONG AND EVERYTHING ELSE</p>
-        <div><span>✦</span> Windows SMTC</div><div><span>◉</span> LRCLIB lyrics</div><div><span>◌</span> Album-art color</div>
+      <section class="signal shell" aria-label="Product highlights">
+        <span>Windows SMTC</span><i></i><span>LRCLIB lyrics</span><i></i><span>Local preferences</span><i></i><span>Optional always-on-top</span>
       </section>
 
       <section class="section shell" id="features">
-        <div class="section-heading"><div><div class="eyebrow">Why people keep it open</div><h2>Small footprint.<br /><em>Big atmosphere.</em></h2></div><p>Keep your music close without opening another full-size player. Choose the mood, the layout, and how much of the song you want to see.</p></div>
-        <div class="feature-showcase">
-          <article class="feature-row feature-row-primary"><span class="feature-index">01</span><div class="feature-row-icon green">♫</div><div><h3>Synchronized lyrics</h3><p>Follow the song in real time with lyrics fetched from LRCLIB — no API key required.</p></div><span class="feature-arrow">↗</span></article>
-          <article class="feature-row"><span class="feature-index">02</span><div class="feature-row-icon blue">✦</div><div><h3>Album-art atmosphere</h3><p>Artwork brings its own accent color, blur, and energy to the overlay.</p></div><span class="feature-arrow">↗</span></article>
-          <article class="feature-row"><span class="feature-index">03</span><div class="feature-row-icon purple">◐</div><div><h3>Your view, your rules</h3><p>Switch between focused lyrics, album cover, and a combined canvas.</p></div><span class="feature-arrow">↗</span></article>
-          <article class="feature-row"><span class="feature-index">04</span><div class="feature-row-icon orange">↗</div><div><h3>Made for your desktop</h3><p>Frameless, draggable, resizable, and always on top.</p></div><span class="feature-arrow">↗</span></article>
-          <article class="feature-row"><span class="feature-index">05</span><div class="feature-row-icon pink">⚡</div><div><h3>Quietly automatic</h3><p>Reads Windows SMTC or Linux MPRIS and keeps playback in sync as your music changes.</p></div><span class="feature-arrow">↗</span></article>
+        <div class="section-intro">
+          <p class="kicker">What it does</p>
+          <h2>Less player.<br /><em>More presence.</em></h2>
+          <p>It reads the music already playing and turns it into a focused visual layer you can make your own.</p>
+        </div>
+        <div class="feature-grid">
+          <article><span>01</span><h3>Lyrics that follow</h3><p>Time-synced lyrics update with the current track and recover when Spotify reconnects.</p></article>
+          <article><span>02</span><h3>Color from the music</h3><p>Album art shapes the atmosphere, or use your own theme with precise HSL sliders.</p></article>
+          <article><span>03</span><h3>A canvas you control</h3><p>Drag, resize, and save layouts for lyrics, cover art, title, status, clock, and more.</p></article>
+          <article><span>04</span><h3>Light on the desktop</h3><p>A native Rust backend keeps media updates responsive without becoming another heavy player.</p></article>
         </div>
       </section>
 
-      <section class="trust-section shell">
-        <div class="trust-copy">
-          <div class="eyebrow">Designed with trust in mind</div>
-          <h2>Local first.<br /><em>Private by default.</em></h2>
-          <p>Your track state and preferences stay on your device. The app has no account system, telemetry, analytics, or tracking. Network requests are limited to lyrics, album-art lookup, and signed update checks.</p>
+      <section class="studio shell" id="studio">
+        <div class="studio-visual">
+          <div class="studio-window">
+            <div class="studio-toolbar"><span></span><b>Custom layout</b><em>Save layout</em></div>
+            <div class="studio-canvas">
+              <div class="studio-cover"></div>
+              <div class="studio-title"><b>Title and artist</b><small>Resize the content with the box</small></div>
+              <div class="studio-lyrics"><small>LYRICS</small><strong>Make it yours,<br />one widget at a time.</strong></div>
+              <div class="studio-clock">10:42</div>
+            </div>
+          </div>
         </div>
-        <div class="trust-cards">
-          <article class="trust-card"><strong>01</strong><h3>No tracking</h3><p>No accounts, analytics, ads, or listening history collection.</p></article>
-          <article class="trust-card"><strong>02</strong><h3>Built in Rust</h3><p>A fast, lightweight native backend powers media integration and the desktop window.</p><img src="./assets/ferris.webp" alt="Ferris the Rust crab" /></article>
-          <article class="trust-card"><strong>03</strong><h3>Open to inspect</h3><p>Review the source and understand exactly what the app does before you install it.</p></article>
+        <div class="studio-copy">
+          <p class="kicker">Theme & layout studio</p>
+          <h2>Your screen,<br /><em>your rules.</em></h2>
+          <p>Name and save custom themes locally. Build a layout around the way you listen, then keep it ready for next time.</p>
+          <ul><li>HSL sliders for accent, background, and text</li><li>Resizable widgets with content that scales</li><li>Saved locally — no account, no sync service</li></ul>
         </div>
       </section>
 
-      <section class="download-section shell" id="download">
-        <div class="download-panel"><div><div class="eyebrow">Ready when you are</div><h2>Make your desktop<br /><em>sound like you.</em></h2><p>Install in seconds, then tune the colors, type, blur, opacity, and layout from Settings.</p></div><a class="button button-primary download-link" href="https://github.com/gabewinstead/SpxtifyMediaVisuals/releases/latest" target="_blank" rel="noreferrer"><span class="button-icon">↓</span><span><strong>Get the latest release</strong><small class="release-label">Windows installer</small></span></a><span class="download-state" role="status" aria-live="polite"></span></div>
+      <section class="quiet shell">
+        <div><p class="kicker">Built for real desktop use</p><h2>Quietly automatic.</h2></div>
+        <p>Spotify changes, sleep and resume, missed media events, and reconnects are handled in the background. Your window stays focused on the song.</p>
+      </section>
+
+      <section class="download shell" id="download">
+        <p class="kicker">Ready when you are</p>
+        <h2>Make space for<br /><em>the music.</em></h2>
+        <a class="button primary download-link" href="https://github.com/gabewinstead/SpxtifyMediaVisuals/releases/latest" target="_blank" rel="noreferrer">Get the latest release <span>↓</span></a>
+        <p class="download-state" role="status" aria-live="polite"></p>
       </section>
     </main>
 
-    <footer class="site-footer shell"><a class="brand" href="#top"><img src="./assets/icon.png" alt="" /><span>Spotify Lyrics Overlay</span></a><p>Local-first, private, and built in Rust · <a href="../LICENSE">Personal, non-commercial use</a></p><a href="https://github.com/gabewinstead/SpxtifyMediaVisuals/issues" target="_blank" rel="noreferrer">Send feedback ↗</a></footer>
+    <footer class="site-footer shell">
+      <a class="brand" href="#top"><img src="./assets/icon.png" alt="" /><span>Spxtify Media Visuals</span></a>
+      <p>Local-first, private, and built in Rust.</p>
+      <a href="https://github.com/gabewinstead/SpxtifyMediaVisuals/issues" target="_blank" rel="noreferrer">Send feedback ↗</a>
+    </footer>
     <script type="module" src="./main.js"></script>
   </body>
 </html>
