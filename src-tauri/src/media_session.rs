@@ -517,7 +517,7 @@ fn parse_playerctl_time(value: &str) -> f64 {
     value.parse::<f64>().unwrap_or_default() / 1_000_000.0
 }
 
-#[cfg(all(unix, not(target_os = "windows")))]
+#[cfg(target_os = "linux")]
 fn run_playerctl(command: &str) -> Result<(), String> {
     let status = std::process::Command::new("playerctl").arg(command).status().map_err(|error| error.to_string())?;
     if status.success() { Ok(()) } else { Err(format!("playerctl {command} failed")) }

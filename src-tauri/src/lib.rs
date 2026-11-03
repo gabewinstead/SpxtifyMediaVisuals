@@ -37,6 +37,9 @@ pub fn run() {
         }
     }
 
+    #[cfg(target_os = "android")]
+    let builder = tauri::Builder::default();
+    #[cfg(not(target_os = "android"))]
     let mut builder = tauri::Builder::default();
     #[cfg(not(target_os = "android"))]
     {
