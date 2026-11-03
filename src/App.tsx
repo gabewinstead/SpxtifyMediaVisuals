@@ -202,13 +202,14 @@ export default function App() {
   const studioOpen = Boolean(themeDraft) || Boolean(layoutDraft) || editingTheme || editingLayout
 
   useEffect(() => {
+    if (/Android/i.test(navigator.userAgent)) return
     void appWindow.setAlwaysOnTop(false).catch((error) => {
       console.warn('Unable to disable always-on-top:', error)
     })
   }, [appWindow])
 
   const installUpdate = async (notifyWhenCurrent: boolean) => {
-    if (!isTauri()) return
+    if (!isTauri() || /Android/i.test(navigator.userAgent)) return
 
     try {
       const update = await check({ timeout: 30000 })
@@ -249,6 +250,7 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    if (/Android/i.test(navigator.userAgent)) return
     const timer = window.setTimeout(() => {
       void installUpdate(false)
     }, 1500)
@@ -778,9 +780,7 @@ export default function App() {
               {androidMediaAccess ? (
                 <span className="update-status">Connected to Spotify media controls</span>
               ) : (
-                <button
-                  onClick={() => void invoke('open_android_media_access_settings')}
-                >
+                <button onClick={() => void invoke('open_android_media_access_settings')}>
                   Enable Spotify access
                 </button>
               )}

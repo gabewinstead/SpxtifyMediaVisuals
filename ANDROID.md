@@ -9,7 +9,6 @@ Install the Android prerequisites:
 
 - Android Studio with the Android SDK, SDK Platform, SDK Build-Tools, and an emulator or USB device
 - Java 17
-- Windows Developer Mode enabled (Tauri uses a symlink for the native Rust library)
 - Rust Android targets:
 
 ```powershell
@@ -29,10 +28,6 @@ npx tauri android init
 TypeScript/Vite frontend and Rust crate source from that worktree; the original checkout and its
 Windows build remain untouched.
 
-The generated mobile crate includes a library target (`src-tauri\src\lib.rs`) because Android loads
-the Rust code as a native `.so`. Windows-only SMTC dependencies remain target-gated, and Android
-uses the Rust-safe fallback until an Android media-session bridge is added.
-
 ## Development and APK build
 
 ```powershell
@@ -40,42 +35,44 @@ npm run android:dev
 npm run android:build
 ```
 
+`android:dev` is for development with a running Vite server. Do not install its debug APK
+unless the Vite server is running on the development machine; otherwise Android will report a
+`localhost:1420` connection error. The Android configuration in this worktree is production-asset
+based, so the APK intended for a phone is the release APK.
+
 The debug APK is written below:
 
 ```text
-src-tauri\gen\android\app\build\outputs\apk\universal\debug\app-universal-debug.apk
+src-tauri\gen\android\app\build\outputs\apk\arm64\debug\app-arm64-debug.apk
 ```
 
 Install it on a connected device:
 
 ```powershell
-adb install -r -i com.android.vending .\src-tauri\gen\android\app\build\outputs\apk\universal\debug\app-universal-debug.apk
-```
-
-On an arm64 device, the generated debug artifact is usually:
-
-```powershell
 adb install -r -i com.android.vending .\src-tauri\gen\android\app\build\outputs\apk\arm64\debug\app-arm64-debug.apk
 ```
 
-If Windows Developer Mode cannot be enabled, the Rust library can be copied instead of symlinked
-and Gradle can assemble the APK directly:
-
-```powershell
-$env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
-cargo build --manifest-path src-tauri\Cargo.toml --target aarch64-linux-android --release
-New-Item -ItemType Directory -Force src-tauri\gen\android\app\src\main\jniLibs\arm64-v8a
-Copy-Item src-tauri\target\aarch64-linux-android\release\libspotify_media_visuals.so `
-  src-tauri\gen\android\app\src\main\jniLibs\arm64-v8a\libspotify_media_visuals.so
-Set-Location src-tauri\gen\android
-.\gradlew.bat app:assembleArm64Release -x rustBuildArm64Release
-```
-
-For a release APK, use Tauri's release build output after configuring Android signing:
+For a release APK, use Tauri's release build output after configuring Android signing. The release
+APK loads the bundled `dist` files and does not require `localhost:1420`:
 
 ```powershell
 npx tauri android build --apk
 ```
+
+For Google Play, build an Android App Bundle instead of an APK:
+
+```powershell
+npm run android:release
+```
+
+The `.aab` output is under
+`src-tauri\gen\android\app\build\outputs\bundle\arm64Release\`. Google Play requires a
+developer account, store listing, privacy policy, and a release-signed bundle. Keep the upload
+keystore and passwords outside Git; losing the upload key can block future updates.
+
+The Android launcher icon is already generated from the project icon and is declared by the
+Android manifest as `@mipmap/ic_launcher`. Google Play also requires a 512x512 store-listing icon,
+feature graphic, screenshots, and a privacy-policy URL; those are store assets, not APK assets.
 
 ## Spotify access on Android
 
@@ -87,6 +84,24 @@ metadata, artwork, position updates, and play/next/previous controls.
 Android may revoke notification access after an app restore or security-policy change. If playback
 stops updating, use the same Settings action to verify access is still enabled. The Windows SMTC
 implementation remains separate and unchanged.
+
+## Android Auto and CarPlay
+
+The phone app is now touch-friendly on small screens, and custom layouts use percentage-based
+positions and sizes so they scale automatically on the phone. Android Auto is a separate host
+environment: it will not automatically display an arbitrary Tauri screen or expose the phone
+app's WebView just because the phone is connected. The Android target now includes a native media
+browser service, so Android Auto can discover Spxtify Media Visuals as a media source and show the
+current Spotify title, artist, album, album art, progress, play/pause, previous, and next controls.
+The service also exposes a compact browse entry for the current song, so the Auto media picker has
+a useful destination instead of an empty app shell. Enable Spotify
+notification access on the phone first, then connect Android Auto and look for the app in the
+media-source list.
+
+Android Auto still cannot show the exact full-screen Tauri visualizer, arbitrary widget positions,
+or custom animated lyrics while driving. Those remain available in the phone app. The Auto service
+uses Android's driving-safe media template instead. Apple CarPlay is not available from an Android
+phone.
 
 Do not copy the generated `src-tauri\gen\android` directory back into the desktop checkout.
 Standard desktop commands remain unchanged:

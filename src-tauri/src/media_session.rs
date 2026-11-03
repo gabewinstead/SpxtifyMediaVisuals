@@ -1,6 +1,11 @@
-use serde::Serialize;
-use std::{sync::atomic::{AtomicBool, Ordering}, time::Duration};
-use tauri::{AppHandle, Emitter};
+use serde::{Deserialize, Serialize};
+use std::sync::atomic::{AtomicBool, Ordering};
+use tauri::AppHandle;
+
+#[cfg(any(target_os = "windows", target_os = "linux", target_os = "android"))]
+use std::time::Duration;
+#[cfg(any(target_os = "windows", target_os = "linux", target_os = "android"))]
+use tauri::Emitter;
 
 #[cfg(target_os = "windows")]
 fn thumbnail_data_url(
@@ -27,6 +32,83 @@ fn thumbnail_data_url(
 }
 
 static FRONTEND_READY: AtomicBool = AtomicBool::new(false);
+
+#[cfg(target_os = "android")]
+fn android_bridge_call(method: &str) -> Result<String, String> {
+    use jni::{
+        objects::{JClass, JObject, JString, JValue},
+        JavaVM,
+    };
+    let context = ndk_context::android_context();
+    let vm = unsafe { JavaVM::from_raw(context.vm() as *mut _) }
+        .map_err(|error| format!("Unable to access Android JVM: {error}"))?;
+    let mut env = vm
+        .attach_current_thread()
+        .map_err(|error| format!("Unable to attach to Android JVM: {error}"))?;
+    let context_object = unsafe {
+        JObject::from_raw(context.context() as jni::sys::jobject)
+    };
+    let class_loader = env
+        .call_method(&context_object, "getClassLoader", "()Ljava/lang/ClassLoader;", &[])
+        .and_then(|value| value.l())
+        .map_err(|error| format!("Android class loader is unavailable: {error}"))?;
+    let class_name = env
+        .new_string("com.spotify.media.visuals.AndroidMediaBridge")
+        .map_err(|error| format!("Unable to create Android class name: {error}"))?;
+    let class = JClass::from(env
+        .call_method(
+            &class_loader,
+            "loadClass",
+            "(Ljava/lang/String;)Ljava/lang/Class;",
+            &[JValue::Object(&JObject::from(class_name))],
+        )
+        .and_then(|value| value.l())
+        .map_err(|error| format!("Android media bridge is unavailable: {error}"))?);
+    let value = env
+        .call_static_method(class, method, "()Ljava/lang/String;", &[])
+        .map_err(|error| format!("Android media bridge call failed: {error}"))?
+        .l()
+        .map_err(|error| format!("Android media bridge returned an invalid value: {error}"))?;
+    let value: JString = value.into();
+    env.get_string(&value)
+        .map(|value| value.to_string_lossy().into_owned())
+        .map_err(|error| format!("Unable to read Android media bridge result: {error}"))
+}
+
+#[cfg(target_os = "android")]
+fn android_result(result: Result<String, String>) -> Result<String, String> {
+    let json = result?;
+    let value: serde_json::Value =
+        serde_json::from_str(&json).map_err(|error| format!("Invalid Android media response: {error}"))?;
+    if let Some(error) = value.get("error").and_then(serde_json::Value::as_str) {
+        return Err(error.to_string());
+    }
+    Ok(json)
+}
+
+#[tauri::command]
+pub fn android_media_access_status() -> bool {
+    #[cfg(target_os = "android")]
+    {
+        return android_bridge_call("hasNotificationAccess")
+            .map(|value| value == "true")
+            .unwrap_or(false);
+    }
+    #[cfg(not(target_os = "android"))]
+    false
+}
+
+#[tauri::command]
+pub fn open_android_media_access_settings() -> Result<(), String> {
+    #[cfg(target_os = "android")]
+    {
+        android_result(android_bridge_call("openNotificationAccessSettings")).map(|_| ())
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        Err("Android media access is only available on Android".to_string())
+    }
+}
 
 #[cfg(target_os = "windows")]
 const POLL_INTERVAL: Duration = Duration::from_millis(250);
@@ -147,7 +229,17 @@ pub async fn get_current_track(include_art: Option<bool>) -> Result<Track, Strin
         }
         return Ok(track);
     }
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "android")]
+    {
+        let method = if include_art.unwrap_or(true) { "currentTrackWithArt" } else { "currentTrack" };
+        let json = android_bridge_call(method)?;
+        let value: serde_json::Value = serde_json::from_str(&json).map_err(|error| error.to_string())?;
+        if let Some(error) = value.get("error").and_then(serde_json::Value::as_str) {
+            return Err(error.to_string());
+        }
+        return serde_json::from_value(value).map_err(|error| error.to_string());
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "android")))]
     {
         let _ = include_art;
         Err("Current media track is not supported on this platform".to_string())
@@ -165,9 +257,11 @@ pub async fn media_play_pause() -> Result<(), String> {
         session.TryTogglePlayPauseAsync().map_err(|error| error.to_string())?.get().map_err(|error| error.to_string())?;
         return Ok(());
     }
-    #[cfg(all(unix, not(target_os = "windows")))]
+    #[cfg(target_os = "android")]
+    { android_result(android_bridge_call("playPause")).map(|_| ()) }
+    #[cfg(target_os = "linux")]
     { run_playerctl("play-pause") }
-    #[cfg(not(any(unix, target_os = "windows")))]
+    #[cfg(not(any(target_os = "android", target_os = "linux", target_os = "windows")))]
     { Err("Media controls are not supported on this platform".to_string()) }
 }
 
@@ -182,9 +276,11 @@ pub async fn media_next() -> Result<(), String> {
         session.TrySkipNextAsync().map_err(|error| error.to_string())?.get().map_err(|error| error.to_string())?;
         return Ok(());
     }
-    #[cfg(all(unix, not(target_os = "windows")))]
+    #[cfg(target_os = "android")]
+    { android_result(android_bridge_call("next")).map(|_| ()) }
+    #[cfg(target_os = "linux")]
     { run_playerctl("next") }
-    #[cfg(not(any(unix, target_os = "windows")))]
+    #[cfg(not(any(target_os = "android", target_os = "linux", target_os = "windows")))]
     { Err("Media controls are not supported on this platform".to_string()) }
 }
 
@@ -199,13 +295,15 @@ pub async fn media_previous() -> Result<(), String> {
         session.TrySkipPreviousAsync().map_err(|error| error.to_string())?.get().map_err(|error| error.to_string())?;
         return Ok(());
     }
-    #[cfg(all(unix, not(target_os = "windows")))]
+    #[cfg(target_os = "android")]
+    { android_result(android_bridge_call("previous")).map(|_| ()) }
+    #[cfg(target_os = "linux")]
     { run_playerctl("previous") }
-    #[cfg(not(any(unix, target_os = "windows")))]
+    #[cfg(not(any(target_os = "android", target_os = "linux", target_os = "windows")))]
     { Err("Media controls are not supported on this platform".to_string()) }
 }
 
-#[derive(Clone, Serialize, Default)]
+#[derive(Clone, Deserialize, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Track {
     pub title: String,
@@ -338,7 +436,7 @@ pub fn start(app: AppHandle) {
     });
 }
 
-#[cfg(all(unix, not(target_os = "windows")))]
+#[cfg(target_os = "linux")]
 pub fn start(app: AppHandle) {
     std::thread::spawn(move || {
         let mut last_key = String::new();
@@ -353,7 +451,8 @@ pub fn start(app: AppHandle) {
 
             if let Ok(output) = output {
                 if output.status.success() {
-                    let values: Vec<&str> = String::from_utf8_lossy(&output.stdout)
+                    let output_text = String::from_utf8_lossy(&output.stdout);
+                    let values: Vec<&str> = output_text
                         .trim()
                         .split('\t')
                         .collect();
@@ -389,17 +488,46 @@ pub fn start(app: AppHandle) {
     });
 }
 
-#[cfg(all(unix, not(target_os = "windows")))]
+#[cfg(target_os = "android")]
+pub fn start(app: AppHandle) {
+    std::thread::spawn(move || {
+        let mut last_key = String::new();
+        loop {
+            if let Ok(json) = android_bridge_call("currentTrack") {
+                if let Ok(track) = serde_json::from_str::<Track>(&json) {
+                    if !track.title.trim().is_empty() {
+                        let key = format!("{}::{}", track.title, track.artist);
+                        if key != last_key {
+                            last_key = key;
+                            let _ = app.emit("track-changed", track.clone());
+                        }
+                        let _ = app.emit(
+                            "position-updated",
+                            serde_json::json!({
+                                "position": track.position,
+                                "duration": track.duration,
+                                "playing": track.playing
+                            }),
+                        );
+                    }
+                }
+            }
+            std::thread::sleep(Duration::from_millis(500));
+        }
+    });
+}
+
+#[cfg(target_os = "linux")]
 fn non_empty(value: &str) -> Option<String> {
     (!value.is_empty()).then(|| value.to_string())
 }
 
-#[cfg(all(unix, not(target_os = "windows")))]
+#[cfg(target_os = "linux")]
 fn parse_playerctl_time(value: &str) -> f64 {
     value.parse::<f64>().unwrap_or_default() / 1_000_000.0
 }
 
-#[cfg(all(unix, not(target_os = "windows")))]
+#[cfg(target_os = "linux")]
 fn run_playerctl(command: &str) -> Result<(), String> {
     let status = std::process::Command::new("playerctl").arg(command).status().map_err(|error| error.to_string())?;
     if status.success() { Ok(()) } else { Err(format!("playerctl {command} failed")) }
