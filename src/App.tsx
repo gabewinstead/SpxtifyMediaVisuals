@@ -161,6 +161,7 @@ export default function App() {
   const [layoutStyle, setLayoutStyle] = useState<string>('center')
   const [mode, setMode] = useState<ViewMode>('lyrics')
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [androidMediaAccess, setAndroidMediaAccess] = useState<boolean | undefined>(undefined)
   const windowOpacity = 1
   const [alwaysOnTop, setAlwaysOnTop] = useState(false)
   const [lyricsLoading, setLyricsLoading] = useState(false)
@@ -201,13 +202,14 @@ export default function App() {
   const studioOpen = Boolean(themeDraft) || Boolean(layoutDraft) || editingTheme || editingLayout
 
   useEffect(() => {
+    if (/Android/i.test(navigator.userAgent)) return
     void appWindow.setAlwaysOnTop(false).catch((error) => {
       console.warn('Unable to disable always-on-top:', error)
     })
   }, [appWindow])
 
   const installUpdate = async (notifyWhenCurrent: boolean) => {
-    if (!isTauri()) return
+    if (!isTauri() || /Android/i.test(navigator.userAgent)) return
 
     try {
       const update = await check({ timeout: 30000 })
@@ -241,6 +243,14 @@ export default function App() {
   }
 
   useEffect(() => {
+    if (!/Android/i.test(navigator.userAgent)) return
+    invoke<boolean>('android_media_access_status')
+      .then(setAndroidMediaAccess)
+      .catch(() => setAndroidMediaAccess(false))
+  }, [])
+
+  useEffect(() => {
+    if (/Android/i.test(navigator.userAgent)) return
     const timer = window.setTimeout(() => {
       void installUpdate(false)
     }, 1500)
@@ -763,6 +773,19 @@ export default function App() {
             />{' '}
             Always on top
           </label>
+
+          {androidMediaAccess !== undefined && (
+            <div className="settings-field">
+              <span>Spotify access</span>
+              {androidMediaAccess ? (
+                <span className="update-status">Connected to Spotify media controls</span>
+              ) : (
+                <button onClick={() => void invoke('open_android_media_access_settings')}>
+                  Enable Spotify access
+                </button>
+              )}
+            </div>
+          )}
 
           <button onClick={() => void installUpdate(true)}>Check for updates</button>
           {updateStatus && <span className="update-status" role="status">{updateStatus}</span>}

@@ -57,6 +57,7 @@ export function CustomCanvas({ widgets, data, editing = false, onChange }: Props
     if (!rect || rect.width === 0 || rect.height === 0) return
 
     setSelected(widget.id)
+    event.currentTarget.setPointerCapture?.(event.pointerId)
     onChange([...widgetsRef.current.filter((item) => item.id !== widget.id), widget]) // bring to front
     stopDrag.current?.()
 
@@ -77,6 +78,9 @@ export function CustomCanvas({ widgets, data, editing = false, onChange }: Props
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', stop)
       window.removeEventListener('pointercancel', stop)
+      if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+        event.currentTarget.releasePointerCapture?.(event.pointerId)
+      }
       stopDrag.current = null
     }
     stopDrag.current = stop

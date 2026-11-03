@@ -7,7 +7,12 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "tauri": "tauri",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "android:init": "tauri android init",
+    "android:dev": "tauri android dev",
+    "android:build": "tauri android build --apk",
+    "android:bundle": "tauri android build --aab",
+    "android:release": "npm run build && npm run android:bundle"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",
