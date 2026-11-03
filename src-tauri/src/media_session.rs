@@ -99,6 +99,16 @@ pub fn frontend_ready() {
 }
 
 #[tauri::command]
+pub fn android_media_access_status() -> bool {
+    false
+}
+
+#[tauri::command]
+pub fn open_android_media_access_settings() -> Result<(), String> {
+    Err("Android media access is only available on Android".to_string())
+}
+
+#[tauri::command]
 /// `include_art` (JS: `includeArt`) defaults to true. Frequent callers pass false to skip encoding the cover.
 pub async fn get_current_track(include_art: Option<bool>) -> Result<Track, String> {
     #[cfg(target_os = "windows")]

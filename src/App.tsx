@@ -161,6 +161,7 @@ export default function App() {
   const [layoutStyle, setLayoutStyle] = useState<string>('center')
   const [mode, setMode] = useState<ViewMode>('lyrics')
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [androidMediaAccess, setAndroidMediaAccess] = useState<boolean | undefined>(undefined)
   const windowOpacity = 1
   const [alwaysOnTop, setAlwaysOnTop] = useState(false)
   const [lyricsLoading, setLyricsLoading] = useState(false)
@@ -239,6 +240,13 @@ export default function App() {
       if (notifyWhenCurrent) setUpdateStatus('Update check failed. Try again later.')
     }
   }
+
+  useEffect(() => {
+    if (!/Android/i.test(navigator.userAgent)) return
+    invoke<boolean>('android_media_access_status')
+      .then(setAndroidMediaAccess)
+      .catch(() => setAndroidMediaAccess(false))
+  }, [])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -763,6 +771,21 @@ export default function App() {
             />{' '}
             Always on top
           </label>
+
+          {androidMediaAccess !== undefined && (
+            <div className="settings-field">
+              <span>Spotify access</span>
+              {androidMediaAccess ? (
+                <span className="update-status">Connected to Spotify media controls</span>
+              ) : (
+                <button
+                  onClick={() => void invoke('open_android_media_access_settings')}
+                >
+                  Enable Spotify access
+                </button>
+              )}
+            </div>
+          )}
 
           <button onClick={() => void installUpdate(true)}>Check for updates</button>
           {updateStatus && <span className="update-status" role="status">{updateStatus}</span>}

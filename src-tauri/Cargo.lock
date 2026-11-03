@@ -3476,8 +3476,11 @@ version = "0.2.7"
 dependencies = [
  "base64 0.22.1",
  "dirs 6.0.0",
+ "jni 0.21.1",
+ "ndk-context",
  "once_cell",
  "reqwest 0.12.28",
+ "rustls",
  "serde",
  "serde_json",
  "tauri",

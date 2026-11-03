@@ -47,6 +47,8 @@ pub fn run() {
             media_session::media_previous,
             media_session::frontend_ready,
             media_session::get_current_track,
+            media_session::android_media_access_status,
+            media_session::open_android_media_access_settings,
             settings::get_theme,
             settings::save_theme,
             settings::save_theme_preset,
