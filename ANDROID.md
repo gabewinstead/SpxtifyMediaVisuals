@@ -120,6 +120,12 @@ or custom animated lyrics while driving. Those remain available in the phone app
 uses Android's driving-safe media template instead. Apple CarPlay is not available from an Android
 phone.
 
+If the app does not appear in Android Auto after installing an update, disconnect and reconnect
+the phone, open Android Auto settings on the phone, enable the app in the launcher/customize-apps
+list, and open the media app picker. Android Auto caches the available media sources; restarting
+Android Auto or the phone may be required after the first installation. Keep notification access
+enabled for NowPlaying Visuals so the service has Spotify metadata to publish.
+
 Standard desktop commands remain unchanged:
 
 ```powershell
