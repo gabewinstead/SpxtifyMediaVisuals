@@ -15,7 +15,7 @@ val tauriProperties = Properties().apply {
 }
 
 android {
-    compileSdk = 35
+    compileSdk = 36
     namespace = "com.spotify.media.visuals"
     defaultConfig {
         manifestPlaceholders["usesCleartextTraffic"] = "false"
