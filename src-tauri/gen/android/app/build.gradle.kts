@@ -70,6 +70,8 @@ rust {
 }
 
 dependencies {
+    implementation("androidx.car.app:app:1.7.0")
+    implementation("androidx.car.app:app-projected:1.7.0")
     implementation("androidx.media:media:1.7.0")
     implementation("androidx.webkit:webkit:1.14.0")
     implementation("androidx.appcompat:appcompat:1.7.1")

@@ -1,0 +1,5 @@
+<resources>
+    <string-array name="car_app_categories">
+        <item>androidx.car.app.category.MEDIA</item>
+    </string-array>
+</resources>

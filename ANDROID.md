@@ -126,6 +126,10 @@ list, and open the media app picker. Android Auto caches the available media sou
 Android Auto or the phone may be required after the first installation. Keep notification access
 enabled for NowPlaying Visuals so the service has Spotify metadata to publish.
 
+The app also registers a small native Android Auto launcher surface. It shows the current title
+and artist in a driving-safe template; playback actions remain in Android Auto's media controls.
+It does not mirror the phone visualizer or display unrestricted animated lyrics.
+
 Standard desktop commands remain unchanged:
 
 ```powershell
