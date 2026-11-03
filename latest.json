@@ -1,11 +1,11 @@
 {
   "platforms": {
     "windows-x86_64": {
-      "url": "https://github.com/gabewinstead/SpxtifyMediaVisuals/releases/download/v0.2.3/Spotify.Lyrics.Overlay_0.2.3_x64-setup.exe",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTcGZzNDF1Zmk1VXhBcFVMTi81eUxwaFJtWnZFa1lPTWpQTXJwSFYvNS9MbWE1WXJqUTRRRTdMODZPYzBzMGMxRFZnZUZkT3VZYlBQTkRUK2lxQS9uS0h2WncxS2pDVnd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzNTg0MDE0CWZpbGU6U3BvdGlmeSBMeXJpY3MgT3ZlcmxheV8wLjIuM194NjQtc2V0dXAuZXhlCXZlcnNpb246MC4yLjMKaFpLOEd5ZDRIaHgrMGpPendMRmVsNjBKVlNFengyL3o2M2s2d2FUbUxDT3dlaDhlc1R3Z1JHQWhQVWlrWWozL0ZsZ2dRK3NLN0FJTVhKZGZsMkpBQlE9PQo="
+      "url": "https://github.com/gabewinstead/SpxtifyMediaVisuals/releases/download/v0.2.7/Spotify.Lyrics.Overlay_0.2.7_x64-setup.exe",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTcGZzNDF1Zmk1VTU0TDZjMzdibWxLNFR2K0RVYWJFaE85ZnhLZGZiV2IvNTdWanh1TWN1STVLNG5PVEY5ek14QVVRWkpwTnRhZkJheldqSEY1OW8xOUowVlIyUXl1NlE4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzNjY0NTYzCWZpbGU6U3BvdGlmeSBMeXJpY3MgT3ZlcmxheV8wLjIuN194NjQtc2V0dXAuZXhlCXZlcnNpb246MC4yLjcKMFcwTVQxQ3Z0dllXenloZjFHSHVYd2RNc203MVlybTVjNW5nWkRMUHp2d25kVi9pV3lRd3ZqU2J3Uk1GY3M0Q0JSVTZyN0VEZmsrQjZZWllwZFRJRGc9PQo="
     }
   },
   "notes": "See the GitHub release notes.",
-  "version": "0.2.3",
-  "pub_date": "2026-11-02T01:47:05Z"
+  "version": "0.2.7",
+  "pub_date": "2026-11-03T00:09:37Z"
 }
