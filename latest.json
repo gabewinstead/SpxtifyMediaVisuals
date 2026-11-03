@@ -1,11 +1,11 @@
 {
-  "pub_date": "2026-11-03T07:16:17Z",
+  "version": "3.5.4",
+  "notes": "See the GitHub release notes.",
+  "pub_date": "2026-11-03T18:44:43Z",
   "platforms": {
     "windows-x86_64": {
-      "url": "https://github.com/gabewinstead/SpxtifyMediaVisuals/releases/download/v3.5.3/NowPlaying.Visuals_3.5.3_x64-setup.exe",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTcGZzNDF1Zmk1VTlBT2Y3Z2NlNkQyYzNWWEpDRnlxRnE2d2tIT0ZBZW1CWDBwL2F5alB6OXM2VU9HalVUVld0UUpzSVVVWlJ6SGpFekdrdlVPNmRLWXFZbHV6elpVdUFjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzNjkwMTY2CWZpbGU6Tm93UGxheWluZyBWaXN1YWxzXzMuNS4zX3g2NC1zZXR1cC5leGUJdmVyc2lvbjozLjUuMwpkaGFMWWlPelJKTUs5UGFkN21XRkFtN3laVHFRakxSeGFoRlZQSFVBdzZ6anlFZ3l3K2IzbHlGSkNDTWFQbG9HL3Y5aXBUeGFZZEI3emtiTE9TVlhCZz09Cg=="
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTcGZzNDF1Zmk1VThZNTlvNlFqUlVOZ1lFSVZjdjEzTkZjL0pWcWZ1TXkxL0VEdGlwNTY2K3J3VVEzOURzZXoxT1NwZHpPa0tEbTVaMjhmdXJlQURnUFlDSVk2NUd6L0E0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzNzMxNDcwCWZpbGU6Tm93UGxheWluZyBWaXN1YWxzXzMuNS40X3g2NC1zZXR1cC5leGUJdmVyc2lvbjozLjUuNAp6WDFFVENGeFlWZUpRNDZFMmpZSHZBNlFHVjd5M00wMXJKS1BNcVB6NmZsckRQRlE2cDZXL3FybUVYbXBBa0FGNy8vTURhZVZQdGhOTHVIdzlXRVhCZz09Cg==",
+      "url": "https://github.com/gabewinstead/SpxtifyMediaVisuals/releases/download/v3.5.4/NowPlaying.Visuals_3.5.4_x64-setup.exe"
     }
-  },
-  "version": "3.5.3",
-  "notes": "See the GitHub release notes."
+  }
 }
