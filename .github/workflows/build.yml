@@ -120,8 +120,8 @@ jobs:
         run: |
           set -euo pipefail
           build_tools="$ANDROID_HOME/build-tools/36.0.0"
-          apk="$(find src-tauri/gen/android/app/build/outputs/apk -type f -name '*release*.apk' | head -n 1)"
-          aab="$(find src-tauri/gen/android/app/build/outputs/bundle -type f -name '*Release*.aab' | head -n 1)"
+          apk="$(find src-tauri/gen/android/app/build/outputs/apk -type f -iname '*.apk' | head -n 1)"
+          aab="$(find src-tauri/gen/android/app/build/outputs/bundle -type f -iname '*.aab' | head -n 1)"
           if [[ -z "$apk" || -z "$aab" ]]; then
             echo "Android release packages were not produced." >&2
             exit 1
