@@ -1,5 +1,6 @@
 "use strict";
 const downloadLinks = Array.from(document.querySelectorAll('.download-link'));
+const androidDownloadLinks = Array.from(document.querySelectorAll('.android-download-link'));
 const releaseLabels = Array.from(document.querySelectorAll('.release-label'));
 const downloadState = document.querySelector('.download-state');
 function setDownloadState(message) {
@@ -15,7 +16,15 @@ async function loadRelease() {
         const windowsUrl = release.platforms?.['windows-x86_64']?.url;
         if (!windowsUrl)
             throw new Error('Windows installer URL is missing');
+        const githubRelease = await fetch('https://api.github.com/repos/gabewinstead/SpxtifyMediaVisuals/releases/latest', { cache: 'no-store' });
+        if (!githubRelease.ok)
+            throw new Error(`GitHub release returned ${githubRelease.status}`);
+        const releaseDetails = await githubRelease.json();
+        const androidAsset = releaseDetails.assets?.find((asset) => asset.name.toLowerCase().endsWith('.apk'));
         downloadLinks.forEach((link) => { link.href = windowsUrl; });
+        androidDownloadLinks.forEach((link) => {
+            link.href = androidAsset?.browser_download_url ?? releaseDetails.html_url;
+        });
         releaseLabels.forEach((label) => { label.textContent = release.version ? `Version ${release.version}` : 'Latest release'; });
         setDownloadState(release.version ? `Latest version ${release.version} · Signed Windows installer` : 'Signed Windows installer');
     }
