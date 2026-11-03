@@ -1,6 +1,6 @@
 <div align="center">
-  <img src="./src-tauri/icons/icon.png" alt="Spxtify Media Visuals icon" width="112" />
-  <h1>Spxtify Media Visuals</h1>
+  <img src="./src-tauri/icons/icon.png" alt="NowPlaying Visuals icon" width="112" />
+  <h1>NowPlaying Visuals</h1>
   <p><strong>A beautiful desktop companion for the music already playing on your computer.</strong></p>
   <p>
     <a href="https://github.com/gabewinstead/SpxtifyMediaVisuals/releases"><img src="https://img.shields.io/github/v/release/gabewinstead/SpxtifyMediaVisuals?style=flat-square&color=1ed760" alt="Latest release" /></a>
@@ -13,14 +13,14 @@
 <br />
 
 <div align="center">
-  <img src="https://cdn.discordapp.com/attachments/1207855250657124393/1565186745203560508/preview.png?ex=6ae3fd3f&is=6ae2abbf&hm=9a5353a1d7e6747030cd724cb2b8a7c30e5b36db78ac633a971b2cbe6e5554af&" alt="Spxtify Media Visuals showing synchronized lyrics over album artwork" width="860" />
+  <img src="https://cdn.discordapp.com/attachments/1207855250657124393/1565186745203560508/preview.png?ex=6ae3fd3f&is=6ae2abbf&hm=9a5353a1d7e6747030cd724cb2b8a7c30e5b36db78ac633a971b2cbe6e5554af&" alt="NowPlaying Visuals showing synchronized lyrics over album artwork" width="860" />
 </div>
 
 <br />
 
 ## A better way to stay in the moment
 
-Spxtify Media Visuals turns the track already playing on your computer into a focused visual experience. Keep the lyrics close, make them yours, and let album art bring the color to your desktop — without opening another full-size player.
+NowPlaying Visuals turns the track already playing on your computer into a focused visual experience. Keep the lyrics close, make them yours, and let album art bring the color to your desktop — without opening another full-size player.
 
 | Synchronized lyrics | Album-art atmosphere | Your layout, your rules |
 | --- | --- | --- |
@@ -65,7 +65,7 @@ Spxtify Media Visuals turns the track already playing on your computer into a fo
 
 <div align="center">
   <img src="https://cdn.discordapp.com/attachments/1207855250657124393/1565186745203560508/preview.png?ex=6ae3fd3f&is=6ae2abbf&hm=9a5353a1d7e6747030cd724cb2b8a7c30e5b36db78ac633a971b2cbe6e5554af&" alt="Lyrics overlay preview" width="48%" />
-  <img src="./src-tauri/icons/icon.png" alt="Spxtify Media Visuals app icon" width="18%" />
+  <img src="./src-tauri/icons/icon.png" alt="NowPlaying Visuals app icon" width="18%" />
 </div>
 
 <br />
@@ -92,9 +92,18 @@ Dial in accent, background, and text colors with HSL sliders, control lyric glow
 
 ## Get started
 
+> **Independent project:** NowPlaying Visuals is not affiliated with, endorsed by, or sponsored
+> by Spotify. Spotify is a trademark of Spotify AB. The app reads media controls exposed by the
+> operating system and does not include Spotify’s software or content.
+
 ### Use a release
 
 Download the latest Windows installer from [Releases](https://github.com/gabewinstead/SpxtifyMediaVisuals/releases). The installer is per-user and does not require administrator access.
+
+For Android, open the same release page and download the asset ending in `.apk`. If Android
+blocks the install, enable **Allow from this source** for the browser or file manager that
+opened the download, then install the APK. Open the app and enable notification access when
+prompted. The `.aab` asset is for Google Play and is not the direct-phone installer.
 
 ### Build from source
 

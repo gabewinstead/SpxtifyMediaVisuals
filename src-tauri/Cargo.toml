@@ -1,6 +1,6 @@
 [package]
 name = "spotify-media-visuals"
-version = "0.2.7"
+version = "3.5.0"
 edition = "2021"
 build = "build.rs"
 

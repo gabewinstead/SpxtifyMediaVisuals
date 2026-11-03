@@ -26,7 +26,7 @@ async function loadRelease() {
             link.href = androidAsset?.browser_download_url ?? releaseDetails.html_url;
         });
         releaseLabels.forEach((label) => { label.textContent = release.version ? `Version ${release.version}` : 'Latest release'; });
-        setDownloadState(release.version ? `Latest version ${release.version} · Signed Windows installer` : 'Signed Windows installer');
+        setDownloadState(release.version ? `Latest version ${release.version} · Windows installer and Android APK` : 'Windows installer and Android APK');
     }
     catch (error) {
         console.warn('Could not load release metadata:', error);
