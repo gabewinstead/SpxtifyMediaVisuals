@@ -1,11 +1,11 @@
 {
-  "version": "3.5.2",
+  "pub_date": "2026-11-03T07:16:17Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTcGZzNDF1Zmk1VXltYlpONStUUXQzeUZzYlNGcGY2OVB5ODBUeUVNZWhzNGFsd2tncnI1dVRWelM5WmZCQkJiSHdqT3pSSDh0bWYxZmpEZnlxUk5sRDBBekhMWWtNOXdJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzNjg5MDI5CWZpbGU6Tm93UGxheWluZyBWaXN1YWxzXzMuNS4yX3g2NC1zZXR1cC5leGUJdmVyc2lvbjozLjUuMgp1S2Y1WW4wQ1NnbEpkaFd4Zkg0V0s3NVFoTFpvZFVIdjg0UE1NbGFTM1IyTDdFRUw0d2ZmU2VHV3p6MENGSitRWlNEQURaeHhERW9nZldKcnQ0MnNDUT09Cg==",
-      "url": "https://github.com/gabewinstead/SpxtifyMediaVisuals/releases/download/v3.5.2/NowPlaying.Visuals_3.5.2_x64-setup.exe"
+      "url": "https://github.com/gabewinstead/SpxtifyMediaVisuals/releases/download/v3.5.3/NowPlaying.Visuals_3.5.3_x64-setup.exe",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTcGZzNDF1Zmk1VTlBT2Y3Z2NlNkQyYzNWWEpDRnlxRnE2d2tIT0ZBZW1CWDBwL2F5alB6OXM2VU9HalVUVld0UUpzSVVVWlJ6SGpFekdrdlVPNmRLWXFZbHV6elpVdUFjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzNjkwMTY2CWZpbGU6Tm93UGxheWluZyBWaXN1YWxzXzMuNS4zX3g2NC1zZXR1cC5leGUJdmVyc2lvbjozLjUuMwpkaGFMWWlPelJKTUs5UGFkN21XRkFtN3laVHFRakxSeGFoRlZQSFVBdzZ6anlFZ3l3K2IzbHlGSkNDTWFQbG9HL3Y5aXBUeGFZZEI3emtiTE9TVlhCZz09Cg=="
     }
   },
-  "notes": "See the GitHub release notes.",
-  "pub_date": "2026-11-03T06:57:29Z"
+  "version": "3.5.3",
+  "notes": "See the GitHub release notes."
 }
