@@ -64,8 +64,6 @@ NowPlaying Visuals turns the track already playing on your computer into a focus
 ## See it in action
 
 <div align="center">
-  <img src="./docs/assets/preview.png" alt="Lyrics overlay preview" width="48%" />
-  <img src="./docs/assets/icon.png" alt="NowPlaying Visuals app icon" width="18%" />
 </div>
 
 <br />
@@ -75,7 +73,7 @@ NowPlaying Visuals turns the track already playing on your computer into a focus
 Drag boxes to move them, pull corners to resize, add widgets from the toolbar, then save your custom arrangement.
 
 <div align="center">
-  <img src="./docs/assets/preview.png" alt="Layout editor showing movable widgets, cover art, lyrics, and controls" width="860" />
+  <img src="./docs/assets/layout.png" alt="Layout editor showing movable widgets, cover art, lyrics, and controls" width="860" />
 </div>
 
 <br />
@@ -85,7 +83,7 @@ Drag boxes to move them, pull corners to resize, add widgets from the toolbar, t
 Dial in accent, background, and text colors with HSL sliders, control lyric glow intensity, background blur, lyric size, and opacity for a look that matches the music.
 
 <div align="center">
-  <img src="./docs/assets/preview.png" alt="Theme editor with HSL color controls, glow, blur, and opacity settings" width="860" />
+  <img src="./docs/assets/theme.png" alt="Theme editor with HSL color controls, glow, blur, and opacity settings" width="860" />
 </div>
 
 > **Tip:** Start with the combined view, then open the layout editor to rearrange widgets or the theme editor to experiment with accent, glow, opacity, and type controls. Themes and layouts are saved per-user and hot-reloaded.
