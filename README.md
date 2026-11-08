@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./src-tauri/icons/icon.png" alt="NowPlaying Visuals icon" width="112" />
+  <img src="./docs/assets/icon.png" alt="NowPlaying Visuals icon" width="112" />
   <h1>NowPlaying Visuals</h1>
   <p><strong>A beautiful desktop companion for the music already playing on your computer.</strong></p>
   <p>
@@ -13,7 +13,7 @@
 <br />
 
 <div align="center">
-  <img src="https://cdn.discordapp.com/attachments/1207855250657124393/1565186745203560508/preview.png?ex=6ae3fd3f&is=6ae2abbf&hm=9a5353a1d7e6747030cd724cb2b8a7c30e5b36db78ac633a971b2cbe6e5554af&" alt="NowPlaying Visuals showing synchronized lyrics over album artwork" width="860" />
+  <img src="./docs/assets/preview.png" alt="NowPlaying Visuals showing synchronized lyrics over album artwork" width="860" />
 </div>
 
 <br />
@@ -64,8 +64,8 @@ NowPlaying Visuals turns the track already playing on your computer into a focus
 ## See it in action
 
 <div align="center">
-  <img src="https://cdn.discordapp.com/attachments/1207855250657124393/1565186745203560508/preview.png?ex=6ae3fd3f&is=6ae2abbf&hm=9a5353a1d7e6747030cd724cb2b8a7c30e5b36db78ac633a971b2cbe6e5554af&" alt="Lyrics overlay preview" width="48%" />
-  <img src="./src-tauri/icons/icon.png" alt="NowPlaying Visuals app icon" width="18%" />
+  <img src="./docs/assets/preview.png" alt="Lyrics overlay preview" width="48%" />
+  <img src="./docs/assets/icon.png" alt="NowPlaying Visuals app icon" width="18%" />
 </div>
 
 <br />
@@ -75,7 +75,7 @@ NowPlaying Visuals turns the track already playing on your computer into a focus
 Drag boxes to move them, pull corners to resize, add widgets from the toolbar, then save your custom arrangement.
 
 <div align="center">
-  <img src="https://cdn.discordapp.com/attachments/1207855250657124393/1565563455497576458/image.png?ex=6ae55c16&is=6ae40a96&hm=c29ff3a36c22e5c2efe846b9ee41265977e3af5067cf3ca72aaaa53d4445d1aa&" alt="Layout editor showing movable widgets, cover art, lyrics, and controls" width="860" />
+  <img src="./docs/assets/preview.png" alt="Layout editor showing movable widgets, cover art, lyrics, and controls" width="860" />
 </div>
 
 <br />
@@ -85,7 +85,7 @@ Drag boxes to move them, pull corners to resize, add widgets from the toolbar, t
 Dial in accent, background, and text colors with HSL sliders, control lyric glow intensity, background blur, lyric size, and opacity for a look that matches the music.
 
 <div align="center">
-  <img src="https://cdn.discordapp.com/attachments/1207855250657124393/1565563630986993797/image.png?ex=6ae55c40&is=6ae40ac0&hm=395e815b5a8642fc61c24bd0c881ca8ba177098b175fb7ac2c3fd5b6cbe64393&" alt="Theme editor with HSL color controls, glow, blur, and opacity settings" width="860" />
+  <img src="./docs/assets/preview.png" alt="Theme editor with HSL color controls, glow, blur, and opacity settings" width="860" />
 </div>
 
 > **Tip:** Start with the combined view, then open the layout editor to rearrange widgets or the theme editor to experiment with accent, glow, opacity, and type controls. Themes and layouts are saved per-user and hot-reloaded.
